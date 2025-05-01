@@ -90,10 +90,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 
         private string HashPassword(string password)
         {
-            // Используем стандартный метод ASP.NET Core Identity
+            byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");
+
             return Convert.ToBase64String(KeyDerivation.Pbkdf2(
                 password: password,
-                salt: RandomNumberGenerator.GetBytes(128 / 8),
+                salt: salt,
                 prf: KeyDerivationPrf.HMACSHA256,
                 iterationCount: 10000,
                 numBytesRequested: 256 / 8));

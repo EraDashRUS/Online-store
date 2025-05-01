@@ -35,6 +35,11 @@ namespace OnlineStore.Data
                 .WithOne(p => p.Order)
                 .HasForeignKey<Order>(o => o.PaymentId);
 
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.Cart)
+                .WithOne(c => c.Order)
+                .HasForeignKey<Order>(o => o.CartId);
+
             //CartItem → Cart (многие к одному)
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.Cart)
@@ -51,7 +56,8 @@ namespace OnlineStore.Data
             modelBuilder.Entity<Cart>()
                 .HasOne(c => c.User)
                 .WithMany(u => u.Carts)
-                .HasForeignKey(c => c.UserId);
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             //Cart → Order (1:1)
             modelBuilder.Entity<Cart>()
