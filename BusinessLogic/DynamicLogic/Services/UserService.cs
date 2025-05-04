@@ -5,23 +5,16 @@ using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
-    public class UserService : IUserService
+    public class UserService(
+        ApplicationDbContext context,
+        IRepository<User> userRepository) : IUserService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IRepository<User> _userRepository;
-
-        public UserService(
-            ApplicationDbContext context,
-            IRepository<User> userRepository)
-        {
-            _context = context;
-            _userRepository = userRepository;
-        }
+        private readonly ApplicationDbContext _context = context;
+        private readonly IRepository<User> _userRepository = userRepository;
 
         public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto)
         {

@@ -1,8 +1,5 @@
 ﻿using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.Models;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 

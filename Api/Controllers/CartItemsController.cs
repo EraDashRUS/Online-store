@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
 
@@ -25,7 +26,10 @@ namespace OnlineStore.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CartItem>>> GetCartItems()
         {
-            return await _context.CartItems.ToListAsync();
+            return await _context.CartItems
+                .Include(ci => ci.Product)  // Подгружаем товар
+                .Include(ci => ci.Cart)     // Подгружаем корзину
+                .ToListAsync();
         }
 
         // GET: api/CartItems/5
@@ -76,12 +80,53 @@ namespace OnlineStore.Api.Controllers
         // POST: api/CartItems
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<CartItem>> PostCartItem(CartItem cartItem)
+        public async Task<ActionResult<CartItem>> AddToCart([FromBody] CartItemCreateDto dto)
         {
+            var (cart, product) = await ValidateRequestAsync(dto);
+            if (cart == null || product == null)
+                return NotFound("Корзина или товар не найдены");
+
+            if (!CheckStock(product, dto.Quantity))
+                return BadRequest("Недостаточно товара на складе");
+
+            var cartItem = await CreateCartItemAsync(dto, product);
+            return CreatedAtAction(nameof(GetCartItem), new { id = cartItem.Id }, MapToResponse(cartItem));
+        }
+
+        // Валидация (17 строк)
+        private async Task<(Cart? cart, Product? product)> ValidateRequestAsync(CartItemCreateDto dto)
+        {
+            var cart = await _context.Carts.FindAsync(dto.CartId);
+            var product = await _context.Products.FindAsync(dto.ProductId);
+            return (cart, product);
+        }
+
+        // Проверка остатков (3 строки)
+        private bool CheckStock(Product product, int quantity)
+        {
+            return product.StockQuantity >= quantity;
+        }
+
+        // Создание записи (12 строк)
+        private async Task<CartItem> CreateCartItemAsync(CartItemCreateDto dto, Product product)
+        {
+            var cartItem = new CartItem
+            {
+                CartId = dto.CartId,
+                ProductId = dto.ProductId,
+                Quantity = dto.Quantity
+            };
+
+            product.StockQuantity -= dto.Quantity;
             _context.CartItems.Add(cartItem);
             await _context.SaveChangesAsync();
+            return cartItem;
+        }
 
-            return CreatedAtAction("GetCartItem", new { id = cartItem.Id }, cartItem);
+        // Маппинг для ответа (5 строк)
+        private object MapToResponse(CartItem item)
+        {
+            return new { item.Id, item.CartId, item.ProductId, item.Quantity };
         }
 
         // DELETE: api/CartItems/5

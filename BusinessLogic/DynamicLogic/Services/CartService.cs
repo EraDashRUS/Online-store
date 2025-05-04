@@ -4,10 +4,6 @@ using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
@@ -138,9 +134,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 .FirstOrDefaultAsync(c => c.Id == cartId && c.UserId == userId);
 
             if (cart == null)
-            {
                 throw new NotFoundException($"Корзина с ID {cartId} не найдена или не принадлежит пользователю");
-            }
 
             return new CartResponseDto
             {

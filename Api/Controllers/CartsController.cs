@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
 
@@ -23,22 +24,27 @@ namespace OnlineStore.Api.Controllers
 
         // GET: api/Carts
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cart>>> GetCarts()
+        
+        public async Task<ActionResult<IEnumerable<Cart>>> GetAllCarts()
         {
-            return await _context.Carts.ToListAsync();
+            return await _context.Carts
+                .Include(c => c.User)
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product)
+                .AsNoTracking() // Для оптимизации
+                .ToListAsync();
         }
 
         // GET: api/Carts/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Cart>> GetCart(int id)
         {
-            var cart = await _context.Carts.FindAsync(id);
+            var cart = await _context.Carts
+                .Include(c => c.User)          // Подгружаем пользователя
+                .Include(c => c.CartItems)     // Подгружаем товары в корзине
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-            if (cart == null)
-            {
-                return NotFound();
-            }
-
+            if (cart == null) return NotFound();
             return cart;
         }
 
