@@ -2,9 +2,22 @@
 
 namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
 {
+    /// <summary>
+    /// DTO для авторизации пользователя
+    /// </summary>
     public class UserLoginDto
     {
-        [Required][EmailAddress] public string Email { get; set; }
-        [Required] public string Password { get; set; }
+        /// <summary>
+        /// Электронная почта пользователя
+        /// </summary>
+        [Required]
+        [EmailAddress] 
+        public string Email { get; set; }
+
+        /// <summary>
+        /// Пароль пользователя
+        /// </summary>
+        [Required] 
+        public string Password { get; set; }
     }
 }
