@@ -6,11 +6,13 @@ using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace OnlineStore.Controllers
 {
+    /// <summary>
+    /// Контроллер для управления пользователями и их аутентификацией
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
@@ -18,6 +20,11 @@ namespace OnlineStore.Controllers
         private readonly IUserService _userService;
         private readonly ApplicationDbContext _context;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр контроллера пользователей
+        /// </summary>
+        /// <param name="userService">Сервис для работы с пользователями</param>
+        /// <param name="context">Контекст базы данных</param>
         public UsersController(
             IUserService userService,
             ApplicationDbContext context)
@@ -26,34 +33,43 @@ namespace OnlineStore.Controllers
             _context = context;
         }
 
+        /// <summary>
+        /// Создает нового пользователя
+        /// </summary>
+        /// <param name="userDto">Данные для создания пользователя</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Созданный пользователь</returns>
+        /// <response code="201">Пользователь успешно создан</response>
+        /// <response code="400">Некорректные данные</response>
         [HttpPost]
-        [HttpPost]
-        public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<UserResponseDto>> CreateUserAsync(
+            UserCreateDto userDto,
+            CancellationToken cancellationToken = default)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
             try
             {
-                // 1. Заполняем все обязательные поля User
                 var user = new User
                 {
-                    FirstName = userDto.FirstName,  // Обязательно
-                    LastName = userDto.LastName,    // Обязательно
-                    Email = userDto.Email,         // Обязательно
-                    PasswordHash = HashPassword(userDto.Password), // Обязательно
+                    FirstName = userDto.FirstName,
+                    LastName = userDto.LastName,
+                    Email = userDto.Email,
+                    PasswordHash = HashPassword(userDto.Password),
                     Phone = userDto.Phone,
-                    Address = userDto.Address// Остальные поля (если есть)
+                    Address = userDto.Address
                 };
 
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync(); // Теперь FirstName не будет NULL
+                await _context.Users.AddAsync(user, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
-                // 2. Создаём Cart
                 var cart = new Cart { UserId = user.Id };
-                _context.Carts.Add(cart);
-                await _context.SaveChangesAsync();
+                await _context.Carts.AddAsync(cart, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
-                await transaction.CommitAsync();
-                return ConvertToDto(user);
+                await transaction.CommitAsync(cancellationToken);
+                return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ConvertToDto(user));
             }
             catch
             {
@@ -62,12 +78,24 @@ namespace OnlineStore.Controllers
             }
         }
 
+        /// <summary>
+        /// Получает пользователя по идентификатору
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Данные пользователя</returns>
+        /// <response code="200">Пользователь найден</response>
+        /// <response code="404">Пользователь не найден</response>
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserResponseDto>> GetUser(int id)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UserResponseDto>> GetUser(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
             if (user == null)
                 return NotFound();
@@ -75,27 +103,49 @@ namespace OnlineStore.Controllers
             return ConvertToDto(user);
         }
 
+        /// <summary>
+        /// Получает список всех пользователей
+        /// </summary>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Список пользователей</returns>
+        /// <response code="200">Успешно возвращен список пользователей</response>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers(
+            CancellationToken cancellationToken = default)
         {
             return await _context.Users
                 .Include(u => u.Cart)
                 .Select(u => ConvertToDto(u))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
 
-        // PUT: api/users/5 (обновление)
+        /// <summary>
+        /// Обновляет данные пользователя
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="userDto">Обновленные данные пользователя</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Результат операции</returns>
+        /// <response code="204">Данные успешно обновлены</response>
+        /// <response code="400">Неверный идентификатор</response>
+        /// <response code="404">Пользователь не найден</response>
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(int id, UserUpdateDto userDto)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateUser(
+            int id,
+            UserUpdateDto userDto,
+            CancellationToken cancellationToken = default)
         {
             if (id != userDto.Id)
-                return BadRequest("ID in URL and body do not match.");
+                return BadRequest("ID в URL и теле запроса не совпадают");
 
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
             if (user == null)
                 return NotFound();
 
-            // Обновляем только изменяемые поля
             user.FirstName = userDto.FirstName;
             user.LastName = userDto.LastName;
             user.Email = userDto.Email;
@@ -104,7 +154,7 @@ namespace OnlineStore.Controllers
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -116,30 +166,54 @@ namespace OnlineStore.Controllers
             return NoContent();
         }
 
-        // DELETE: api/users/5
+        /// <summary>
+        /// Удаляет пользователя
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Результат операции</returns>
+        /// <response code="204">Пользователь успешно удален</response>
+        /// <response code="404">Пользователь не найден</response>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(int id)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteUser(
+            int id,
+            CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
             if (user == null)
                 return NotFound();
 
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return NoContent();
         }
 
-        // GET: api/users/email?email=test@example.com (поиск по email)
+        /// <summary>
+        /// Находит пользователя по email
+        /// </summary>
+        /// <param name="email">Email пользователя</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Данные пользователя</returns>
+        /// <response code="200">Пользователь найден</response>
+        /// <response code="400">Некорректный email</response>
+        /// <response code="404">Пользователь не найден</response>
         [HttpGet("email")]
-        public async Task<ActionResult<UserResponseDto>> GetUserByEmail([EmailAddress] string email)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<UserResponseDto>> GetUserByEmail(
+            [EmailAddress] string email,
+            CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Email == email);
+                .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
             if (user == null)
                 return NotFound();
@@ -147,16 +221,24 @@ namespace OnlineStore.Controllers
             return ConvertToDto(user);
         }
 
-        private bool UserExists(int id)
-        {
-            return _context.Users.Any(e => e.Id == id);
-        }
-
+        /// <summary>
+        /// Регистрирует нового пользователя
+        /// </summary>
+        /// <param name="registerDto">Данные для регистрации</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Зарегистрированный пользователь</returns>
+        /// <response code="201">Пользователь успешно зарегистрирован</response>
+        /// <response code="400">Некорректные данные</response>
+        /// <response code="409">Пользователь с таким email уже существует</response>
         [HttpPost("register")]
-        public async Task<ActionResult<UserResponseDto>> Register(UserRegisterDto registerDto)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<ActionResult<UserResponseDto>> Register(
+            UserRegisterDto registerDto,
+            CancellationToken cancellationToken = default)
         {
-            // Проверка, что email не занят
-            if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
+            if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email, cancellationToken))
                 return Conflict("Пользователь с таким email уже существует.");
 
             var user = new User
@@ -164,28 +246,41 @@ namespace OnlineStore.Controllers
                 FirstName = registerDto.FirstName,
                 LastName = registerDto.LastName,
                 Email = registerDto.Email,
-                PasswordHash = HashPassword(registerDto.Password), // Хешируем пароль
+                PasswordHash = HashPassword(registerDto.Password),
                 Phone = registerDto.Phone,
                 Address = registerDto.Address
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            await _context.Users.AddAsync(user, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-            // Создаем корзину для пользователя
             var cart = new Cart { UserId = user.Id };
-            _context.Carts.Add(cart);
-            await _context.SaveChangesAsync();
+            await _context.Carts.AddAsync(cart, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
             return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ConvertToDto(user));
         }
 
+        /// <summary>
+        /// Аутентифицирует пользователя
+        /// </summary>
+        /// <param name="loginDto">Данные для входа</param>
+        /// <param name="cancellationToken">Токен отмены операции</param>
+        /// <returns>Данные аутентифицированного пользователя</returns>
+        /// <response code="200">Успешная аутентификация</response>
+        /// <response code="400">Некорректные данные</response>
+        /// <response code="401">Неверные учетные данные</response>
         [HttpPost("login")]
-        public async Task<ActionResult<UserResponseDto>> Login(UserLoginDto loginDto)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<UserResponseDto>> Login(
+            UserLoginDto loginDto,
+            CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+                .FirstOrDefaultAsync(u => u.Email == loginDto.Email, cancellationToken);
 
             if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
                 return Unauthorized("Неверный email или пароль.");
@@ -193,12 +288,32 @@ namespace OnlineStore.Controllers
             return ConvertToDto(user);
         }
 
-        // Метод для проверки пароля
+        /// <summary>
+        /// Проверяет существование пользователя
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <returns>True если пользователь существует, иначе False</returns>
+        private bool UserExists(int id)
+        {
+            return _context.Users.Any(e => e.Id == id);
+        }
+
+        /// <summary>
+        /// Проверяет соответствие пароля хешу
+        /// </summary>
+        /// <param name="password">Пароль для проверки</param>
+        /// <param name="storedHash">Хеш из базы данных</param>
+        /// <returns>True если пароль верный, иначе False</returns>
         private bool VerifyPassword(string password, string storedHash)
         {
             return HashPassword(password) == storedHash;
         }
 
+        /// <summary>
+        /// Преобразует сущность User в DTO
+        /// </summary>
+        /// <param name="user">Сущность пользователя</param>
+        /// <returns>DTO пользователя</returns>
         private static UserResponseDto ConvertToDto(User user)
         {
             return new UserResponseDto
@@ -213,10 +328,14 @@ namespace OnlineStore.Controllers
             };
         }
 
+        /// <summary>
+        /// Хеширует пароль
+        /// </summary>
+        /// <param name="password">Пароль для хеширования</param>
+        /// <returns>Хеш пароля</returns>
         private string HashPassword(string password)
         {
             byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");
-
             return Convert.ToBase64String(KeyDerivation.Pbkdf2(
                 password: password,
                 salt: salt,

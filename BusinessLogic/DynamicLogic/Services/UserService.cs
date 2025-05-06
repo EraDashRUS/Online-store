@@ -9,6 +9,9 @@ using System.Text;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
+    /// <summary>
+    /// Сервис для работы с пользователями
+    /// </summary>
     public class UserService(
         ApplicationDbContext context,
         IRepository<User> userRepository) : IUserService
@@ -16,17 +19,21 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         private readonly ApplicationDbContext _context = context;
         private readonly IRepository<User> _userRepository = userRepository;
 
+        /// <summary>
+        /// Создает нового пользователя
+        /// </summary>
+        /// <param name="userDto">DTO с данными пользователя</param>
+        /// <returns>DTO созданного пользователя</returns>
+        /// <exception cref="ArgumentException">Пользователь с таким email уже существует</exception>
         public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                // Проверка существования пользователя
                 if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))
                     throw new ArgumentException("Пользователь с таким email уже существует");
 
-                // Создаем пользователя и корзину в одной транзакции
                 var user = new User
                 {
                     FirstName = userDto.FirstName,
@@ -35,7 +42,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                     PasswordHash = HashPassword(userDto.Password),
                     Phone = userDto.Phone,
                     Address = userDto.Address,
-                    Carts = new List<Cart> { new Cart() } // Сразу создаем корзину
+                    Carts = new List<Cart> { new Cart() }
                 };
 
                 _context.Users.Add(user);
@@ -55,6 +62,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             }
         }
 
+        /// <summary>
+        /// Получает пользователя по идентификатору
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <returns>DTO пользователя</returns>
+        /// <exception cref="NotFoundException">Пользователь не найден</exception>
         public async Task<UserResponseDto> GetUserByIdAsync(int id)
         {
             var user = await _context.Users
@@ -67,6 +80,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return ConvertToDto(user);
         }
 
+        /// <summary>
+        /// Преобразует сущность пользователя в DTO
+        /// </summary>
+        /// <param name="user">Сущность пользователя</param>
+        /// <returns>DTO пользователя</returns>
         private UserResponseDto ConvertToDto(User user)
         {
             return new UserResponseDto
@@ -81,6 +99,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Хеширует пароль пользователя
+        /// </summary>
+        /// <param name="password">Исходный пароль</param>
+        /// <returns>Хешированный пароль</returns>
         private string HashPassword(string password)
         {
             byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");

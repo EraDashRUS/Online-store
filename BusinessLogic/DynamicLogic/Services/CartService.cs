@@ -7,12 +7,21 @@ using OnlineStore.Models;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
+    /// <summary>
+    /// Сервис для работы с корзиной покупок
+    /// </summary>
     public class CartService : ICartService
     {
         private readonly ApplicationDbContext _context;
         private readonly IRepository<Cart> _cartRepository;
         private readonly IRepository<CartItem> _cartItemRepository;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр сервиса корзины
+        /// </summary>
+        /// <param name="context">Контекст базы данных</param>
+        /// <param name="cartRepository">Репозиторий корзины</param>
+        /// <param name="cartItemRepository">Репозиторий элементов корзины</param>
         public CartService(
             ApplicationDbContext context,
             IRepository<Cart> cartRepository,
@@ -23,9 +32,15 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             _cartItemRepository = cartItemRepository ?? throw new ArgumentNullException(nameof(cartItemRepository));
         }
 
+        /// <summary>
+        /// Получает корзину пользователя по его идентификатору
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <returns>Данные корзины</returns>
+        /// <exception cref="NotFoundException">Пользователь не найден</exception>
         public async Task<CartResponseDto> GetCartByUserIdAsync(int userId)
         {
-            // Сначала проверяем существование пользователя
+            
             var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
             if (!userExists)
             {
@@ -41,12 +56,18 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             {
                 cart = new Cart { UserId = userId };
                 await _cartRepository.AddAsync(cart);
-                await _context.SaveChangesAsync(); // Сохраняем новую корзину
+                await _context.SaveChangesAsync(); 
             }
 
             return MapToDto(cart);
         }
 
+        /// <summary>
+        /// Добавляет товар в корзину
+        /// </summary>
+        /// <param name="itemDto">Данные добавляемого товара</param>
+        /// <returns>Данные добавленного товара</returns>
+        /// <exception cref="NotFoundException">Корзина или товар не найдены</exception>
         public async Task<CartItemResponseDto> AddToCartAsync(CartItemCreateDto itemDto)
         {
             var cart = await _context.Carts
@@ -84,6 +105,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return ConvertItemToDto(existingItem);
         }
 
+        /// <summary>
+        /// Удаляет товар из корзины
+        /// </summary>
+        /// <param name="itemId">Идентификатор элемента корзины</param>
+        /// <returns>True если элемент успешно удален, иначе false</returns>
         public async Task<bool> RemoveFromCartAsync(int itemId)
         {
             var item = await _cartItemRepository.GetByIdAsync(itemId);
@@ -95,6 +121,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return true;
         }
 
+        /// <summary>
+        /// Очищает корзину пользователя
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <returns>True если корзина успешно очищена, иначе false</returns>
         public async Task<bool> ClearCartAsync(int userId)
         {
             var cart = await _context.Carts
@@ -109,6 +140,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return true;
         }
 
+        /// <summary>
+        /// Обновляет элемент корзины
+        /// </summary>
+        /// <param name="itemDto">Данные обновления</param>
+        /// <returns>Обновленные данные корзины</returns>
+        /// <exception cref="ArgumentException">Элемент корзины не найден</exception>
         public async Task<CartResponseDto> UpdateCartItemAsync(CartItemUpdateDto itemDto)
         {
             var item = await _cartItemRepository.GetByIdAsync(itemDto.Id);
@@ -125,9 +162,16 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 (await _cartRepository.GetByIdAsync(item.CartId)).UserId);
         }
 
+        /// <summary>
+        /// Получает корзину пользователя по идентификаторам пользователя и корзины
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <returns>Данные корзины</returns>
+        /// <exception cref="NotFoundException">Корзина не найдена или не принадлежит пользователю</exception>
         public async Task<CartResponseDto> GetUserCartAsync(int userId, int cartId)
         {
-            // Получаем корзину с элементами и связанными продуктами
+            
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Product)
@@ -154,6 +198,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Создает новую корзину для пользователя
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <returns>Данные созданной корзины</returns>
         public async Task<CartResponseDto> CreateCartForUserAsync(int userId)
         {
             var cart = new Cart { UserId = userId };
@@ -162,6 +211,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return MapToDto(cart);
         }
 
+        /// <summary>
+        /// Получает список всех корзин пользователя
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя</param>
+        /// <returns>Список корзин пользователя</returns>
         public async Task<List<CartResponseDto>> GetUserCartsAsync(int userId)
         {
             return await _context.Carts
@@ -175,6 +229,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Преобразует корзину в DTO
+        /// </summary>
+        /// <param name="cart">Корзина</param>
+        /// <returns>DTO корзины</returns>
         private CartResponseDto MapToDto(Cart cart)
         {
             return new CartResponseDto
@@ -186,6 +245,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Преобразует элемент корзины в DTO
+        /// </summary>
+        /// <param name="item">Элемент корзины</param>
+        /// <returns>DTO элемента корзины</returns>
         private CartItemResponseDto ConvertItemToDto(CartItem item)
         {
             return new CartItemResponseDto
@@ -196,7 +260,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 ProductName = item.Product?.Name ?? "Неизвестный товар",
                 ProductPrice = item.Product?.Price ?? 0m,
                 Quantity = item.Quantity,
-                IsAvailable = item.Product?.StockQuantity > 0 // Проверка наличия на складе
+                IsAvailable = item.Product?.StockQuantity > 0
             };
         }
 
