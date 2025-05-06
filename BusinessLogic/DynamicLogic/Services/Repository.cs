@@ -29,23 +29,25 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Добавляет новую сущность
         /// </summary>
         /// <param name="entity">Сущность для добавления</param>
-        public async Task AddAsync(T entity)
+        /// <param name="cancellationToken">Токен отмены</param>
+        public async Task AddAsync(T entity, CancellationToken cancellationToken = default)
         {
-            await _context.Set<T>().AddAsync(entity);
-            await _context.SaveChangesAsync();
+            await _context.Set<T>().AddAsync(entity, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         /// <summary>
         /// Удаляет сущность по идентификатору
         /// </summary>
         /// <param name="id">Идентификатор сущности</param>
-        public async Task DeleteAsync(int id)
+        /// <param name="cancellationToken">Токен отмены</param>
+        public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await GetByIdAsync(id);
+            var entity = await GetByIdAsync(id, cancellationToken);
             if (entity != null)
             {
                 _context.Set<T>().Remove(entity);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
             }
         }
 
@@ -53,49 +55,54 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Проверяет существование сущности по идентификатору
         /// </summary>
         /// <param name="id">Идентификатор сущности</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>True если сущность существует, иначе false</returns>
-        public async Task<bool> ExistsAsync(int id)
+        public async Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.Set<T>().FindAsync(id) != null;
+            return await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken) != null;
         }
 
         /// <summary>
         /// Находит сущности по условию
         /// </summary>
         /// <param name="predicate">Условие поиска</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Коллекция найденных сущностей</returns>
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         {
-            return await _context.Set<T>().Where(predicate).ToListAsync();
+            return await _context.Set<T>().Where(predicate).ToListAsync(cancellationToken);
         }
 
         /// <summary>
         /// Получает все сущности
         /// </summary>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Коллекция всех сущностей</returns>
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Set<T>().ToListAsync();
+            return await _context.Set<T>().ToListAsync(cancellationToken);
         }
 
         /// <summary>
         /// Получает сущность по идентификатору
         /// </summary>
         /// <param name="id">Идентификатор сущности</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Найденная сущность или null</returns>
-        public async Task<T?> GetByIdAsync(int id)
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.Set<T>().FindAsync(id);
+            return await _context.Set<T>().FindAsync(new object[] { id }, cancellationToken);
         }
 
         /// <summary>
         /// Обновляет существующую сущность
         /// </summary>
         /// <param name="entity">Сущность для обновления</param>
-        public async Task UpdateAsync(T entity)
+        /// <param name="cancellationToken">Токен отмены</param>
+        public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
             _context.Entry(entity).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

@@ -23,15 +23,16 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Создает нового пользователя
         /// </summary>
         /// <param name="userDto">DTO с данными пользователя</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>DTO созданного пользователя</returns>
         /// <exception cref="ArgumentException">Пользователь с таким email уже существует</exception>
-        public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto)
+        public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto, CancellationToken cancellationToken = default)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))
+                if (await _context.Users.AnyAsync(u => u.Email == userDto.Email, cancellationToken))
                     throw new ArgumentException("Пользователь с таким email уже существует");
 
                 var user = new User
@@ -50,14 +51,14 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 var cart = new Cart { User = user };
                 _context.Carts.Add(cart);
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
 
                 return ConvertToDto(user);
             }
             catch
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
         }
@@ -66,13 +67,14 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Получает пользователя по идентификатору
         /// </summary>
         /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>DTO пользователя</returns>
         /// <exception cref="NotFoundException">Пользователь не найден</exception>
-        public async Task<UserResponseDto> GetUserByIdAsync(int id)
+        public async Task<UserResponseDto> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
             if (user == null)
                 throw new NotFoundException("Пользователь не найден");
