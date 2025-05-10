@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Net.Http.Json;
 
 public class AdminEmailFilter : IAsyncAuthorizationFilter
 {

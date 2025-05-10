@@ -9,17 +9,16 @@ using OnlineStore.BusinessLogic.DynamicLogic.Services;
 using System.Text.Json.Serialization;
 using OnlineStore.BusinessLogic.StaticLogic.Settings;
 using OnlineStore.Models;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
+/// <summary>
+/// Точка входа в приложение
+/// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
-// ������������ ���� ������
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ����������� ��������
 builder.Services
     .AddScoped<IProductService, ProductService>()
     .AddScoped<ICartService, CartService>()
@@ -30,25 +29,19 @@ builder.Services
     .AddScoped<IOrderService, OrderService>()
     .AddScoped<AdminEmailFilter>();
 
-
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
 
-// ��������� FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>(); // ���������� �������� ������
+builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
 
-// �����������
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddHttpClient(); // Для HttpClient
+builder.Services.AddHttpClient();
 
-
-
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -65,7 +58,6 @@ builder.Services.AddAuthentication("DummyScheme")
 
 var app = builder.Build();
 
-// ������������ middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -78,7 +70,6 @@ if (app.Environment.IsDevelopment())
 {
     app.Use(async (context, next) =>
     {
-        // Симулируем email админа (только для Development!)
         if (context.Request.Headers.TryGetValue("X-User-Email", out var email))
         {
             var claims = new[] { new Claim(ClaimTypes.Email, email!) };
@@ -91,10 +82,6 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-
-
-
 
 app.Logger.LogInformation("Application started on {Url}", app.Urls);
 app.Run();

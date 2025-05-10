@@ -12,12 +12,21 @@ using System.Text;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
+    /// <summary>
+    /// Сервис для работы с пользователями
+    /// </summary>
     public class UserService : IUserService
     {
         private readonly ApplicationDbContext _context;
         private readonly IRepository<User> _userRepository;
         private readonly List<string> _adminEmails;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр класса UserService
+        /// </summary>
+        /// <param name="context">Контекст базы данных</param>
+        /// <param name="userRepository">Репозиторий пользователей</param>
+        /// <param name="adminSettings">Настройки администраторов</param>
         public UserService(
             ApplicationDbContext context,
             IRepository<User> userRepository,
@@ -28,6 +37,13 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             _adminEmails = adminSettings.Value.AdminEmails;
         }
 
+        /// <summary>
+        /// Создает нового пользователя
+        /// </summary>
+        /// <param name="userDto">DTO с данными пользователя</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>DTO созданного пользователя</returns>
+        /// <exception cref="ArgumentException">Возникает, если пользователь с таким email уже существует</exception>
         public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto, CancellationToken cancellationToken = default)
         {
             using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
@@ -60,6 +76,13 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             }
         }
 
+        /// <summary>
+        /// Получает пользователя по идентификатору
+        /// </summary>
+        /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>DTO пользователя</returns>
+        /// <exception cref="NotFoundException">Возникает, если пользователь не найден</exception>
         public async Task<UserResponseDto> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
@@ -72,6 +95,14 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return ConvertToDto(user);
         }
 
+        /// <summary>
+        /// Аутентифицирует пользователя
+        /// </summary>
+        /// <param name="email">Email пользователя</param>
+        /// <param name="password">Пароль пользователя</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>DTO аутентифицированного пользователя</returns>
+        /// <exception cref="AuthenticationException">Возникает при неверных учетных данных</exception>
         public async Task<UserResponseDto> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
@@ -86,11 +117,22 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return userDto;
         }
 
+        /// <summary>
+        /// Проверяет соответствие пароля хешу
+        /// </summary>
+        /// <param name="password">Проверяемый пароль</param>
+        /// <param name="storedHash">Сохраненный хеш</param>
+        /// <returns>true если пароль верный, иначе false</returns>
         private static bool VerifyPassword(string password, string storedHash)
         {
             return HashPassword(password) == storedHash;
         }
 
+        /// <summary>
+        /// Преобразует сущность пользователя в DTO
+        /// </summary>
+        /// <param name="user">Сущность пользователя</param>
+        /// <returns>DTO пользователя</returns>
         private static UserResponseDto ConvertToDto(User user)
         {
             return new UserResponseDto
@@ -105,6 +147,11 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Хеширует пароль
+        /// </summary>
+        /// <param name="password">Исходный пароль</param>
+        /// <returns>Хеш пароля</returns>
         private static string HashPassword(string password)
         {
             byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");

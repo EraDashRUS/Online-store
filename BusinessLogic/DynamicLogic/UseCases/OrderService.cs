@@ -7,15 +7,30 @@ using OnlineStore.Models;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
+    /// <summary>
+    /// Сервис для работы с заказами
+    /// </summary>
     public class OrderService : IOrderService
     {
         private readonly ApplicationDbContext _context;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр сервиса заказов
+        /// </summary>
+        /// <param name="context">Контекст базы данных</param>
         public OrderService(ApplicationDbContext context)
         {
             _context = context;
         }
 
+        /// <summary>
+        /// Создает заказ на основе корзины
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Информация о созданном заказе</returns>
+        /// <exception cref="NotFoundException">Корзина не найдена</exception>
+        /// <exception cref="InvalidOperationException">Корзина пуста</exception>
         public async Task<OrderDto> CreateOrderFromCartAsync(int cartId, CancellationToken cancellationToken)
         {
             var cart = await _context.Carts
@@ -27,8 +42,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             if (cart == null) throw new NotFoundException("Корзина не найдена");
             if (!cart.Items.Any()) throw new InvalidOperationException("Корзина пуста");
 
-            // Создаем заказ на основе корзины
-            cart.Status = "Pending"; // Новый статус
+            cart.Status = "Pending";
             await _context.SaveChangesAsync(cancellationToken);
 
             return new OrderDto
@@ -47,6 +61,13 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Получает информацию о заказе
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Информация о заказе</returns>
+        /// <exception cref="NotFoundException">Заказ не найден</exception>
         public async Task<OrderDto> GetOrderAsync(int cartId, CancellationToken cancellationToken)
         {
             var cart = await _context.Carts.FindAsync(cartId);
@@ -74,10 +95,15 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Получает список всех заказов
+        /// </summary>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Список заказов</returns>
         public async Task<List<OrderDto>> GetAllOrdersAsync(CancellationToken cancellationToken)
         {
             var orderCarts = await _context.Carts
-                .Where(c => c.Status != null) // Корзины со статусом считаем заказами
+                .Where(c => c.Status != null)
                 .Include(c => c.User)
                 .ToListAsync(cancellationToken);
 
@@ -109,6 +135,14 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return result;
         }
 
+        /// <summary>
+        /// Обновляет статус заказа
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <param name="statusDto">Новый статус</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Обновленная информация о заказе</returns>
+        /// <exception cref="NotFoundException">Заказ не найден</exception>
         public async Task<OrderDto> UpdateOrderStatusAsync(
             int cartId,
             OrderStatusUpdateDto statusDto,
@@ -123,31 +157,40 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return await GetOrderAsync(cartId, cancellationToken);
         }
 
+        /// <summary>
+        /// Обновляет информацию о заказе
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <param name="orderDto">Обновленная информация</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Обновленная информация о заказе</returns>
+        /// <exception cref="NotFoundException">Заказ не найден</exception>
         public async Task<OrderDto> UpdateOrderAsync(
-    int cartId,
-    OrderDto orderDto,
-    CancellationToken cancellationToken)
+            int cartId,
+            OrderDto orderDto,
+            CancellationToken cancellationToken)
         {
-            // Получаем корзину без элементов
             var cart = await _context.Carts
                 .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken);
 
             if (cart == null)
                 throw new NotFoundException("Order not found");
 
-            // Получаем текущие элементы корзины
             var currentItems = await _context.CartItems
                 .Where(ci => ci.CartId == cartId)
                 .ToListAsync(cancellationToken);
 
-            // В реальном проекте изменение состава заказа после создания
-            // обычно не допускается. Здесь только обновление статуса.
             cart.Status = orderDto.Status;
             await _context.SaveChangesAsync(cancellationToken);
 
             return await GetOrderAsync(cartId, cancellationToken);
         }
 
+        /// <summary>
+        /// Преобразует корзину в DTO заказа
+        /// </summary>
+        /// <param name="cart">Корзина</param>
+        /// <returns>DTO заказа</returns>
         private async Task<OrderDto> MapCartToOrderDto(Cart cart)
         {
             var cartItems = await _context.CartItems
@@ -171,6 +214,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Получает заказ с комментарием администратора
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Заказ с комментарием</returns>
         public async Task<OrderWithCommentDto> GetOrderWithCommentAsync(int cartId, CancellationToken cancellationToken)
         {
             var order = await GetOrderAsync(cartId, cancellationToken);
@@ -182,13 +231,17 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
                 Items = order.Items,
-                AdminComment = GetTemporaryAdminComment(cartId) // Логика временных комментариев
+                AdminComment = GetTemporaryAdminComment(cartId)
             };
         }
 
+        /// <summary>
+        /// Получает временный комментарий администратора
+        /// </summary>
+        /// <param name="cartId">Идентификатор корзины</param>
+        /// <returns>Комментарий администратора</returns>
         private string? GetTemporaryAdminComment(int cartId)
         {
-            // Временная реализация - можно заменить на реальную логику
             return cartId % 2 == 0 ? "Проверенный заказ" : null;
         }
     }

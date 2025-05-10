@@ -10,25 +10,13 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
     /// <summary>
     /// Сервис для работы с товарами
     /// </summary>
-    /// <remarks>
-    /// Инициализирует новый экземпляр сервиса товаров
-    /// </remarks>
-    /// <param name="repository">Репозиторий товаров</param>
-    /// <exception cref="ArgumentNullException">repository равен null</exception>
     public class ProductService(
     IRepository<Product> repository,
     ApplicationDbContext context) : IProductService
     {
-       
-
         private readonly IRepository<Product> _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         private readonly ApplicationDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
-        /// <summary>
-        /// Преобразует сущность товара в DTO
-        /// </summary>
-        /// <param name="product">Сущность товара</param>
-        /// <returns>DTO товара</returns>
         private ProductResponseDto ConvertToDto(Product product)
         {
             return new ProductResponseDto
@@ -41,6 +29,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        /// <summary>
+        /// Получает отфильтрованный список товаров
+        /// </summary>
+        /// <param name="query">Параметры фильтрации и сортировки</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Список товаров, соответствующих критериям</returns>
         public async Task<IEnumerable<ProductResponseDto>> GetProductsAsync(
             ProductQueryDto query,
             CancellationToken cancellationToken = default)
@@ -126,12 +120,6 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 .ToListAsync(cancellationToken);
         }
 
-
-        /// <summary>
-        /// Преобразует DTO создания товара в сущность
-        /// </summary>
-        /// <param name="dto">DTO создания товара</param>
-        /// <returns>Сущность товара</returns>
         private static Product ConvertFromCreateDto(ProductCreateDto dto)
         {
             return new Product
@@ -148,7 +136,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// </summary>
         /// <param name="id">Идентификатор товара</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO товара</returns>
+        /// <returns>Информация о товаре</returns>
         /// <exception cref="NotFoundException">Товар не найден</exception>
         public async Task<ProductResponseDto> GetProductByIdAsync(int id, CancellationToken cancellationToken = default)
         {
@@ -160,7 +148,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Получает список всех товаров
         /// </summary>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>Список DTO товаров</returns>
+        /// <returns>Список всех товаров</returns>
         public async Task<List<ProductResponseDto>> GetAllProductsAsync(CancellationToken cancellationToken = default)
         {
             var products = await _repository.GetAllAsync(cancellationToken);
@@ -170,9 +158,9 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// <summary>
         /// Создает новый товар
         /// </summary>
-        /// <param name="productDto">DTO создания товара</param>
+        /// <param name="productDto">Данные нового товара</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO созданного товара</returns>
+        /// <returns>Информация о созданном товаре</returns>
         public async Task<ProductResponseDto> CreateProductAsync(ProductCreateDto productDto, CancellationToken cancellationToken = default)
         {
             var product = ConvertFromCreateDto(productDto);
@@ -184,9 +172,9 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// Обновляет существующий товар
         /// </summary>
         /// <param name="id">Идентификатор товара</param>
-        /// <param name="productDto">DTO обновления товара</param>
+        /// <param name="productDto">Обновляемые данные</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO обновленного товара</returns>
+        /// <returns>Обновленная информация о товаре</returns>
         /// <exception cref="NotFoundException">Товар не найден</exception>
         public async Task<ProductResponseDto> UpdateProductAsync(int id, ProductUpdateDto productDto, CancellationToken cancellationToken = default)
         {
@@ -224,9 +212,9 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         }
 
         /// <summary>
-        /// Осуществляет поиск товаров по строке поиска
+        /// Осуществляет поиск товаров
         /// </summary>
-        /// <param name="searchTerm">Строка поиска</param>
+        /// <param name="searchTerm">Поисковый запрос</param>
         /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Список найденных товаров</returns>
         public async Task<List<ProductResponseDto>> SearchProductsAsync(string searchTerm, CancellationToken cancellationToken = default)
