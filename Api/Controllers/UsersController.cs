@@ -6,6 +6,7 @@ using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Data;
 using OnlineStore.Models;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Authentication;
 using System.Text;
 
 namespace OnlineStore.Controllers
@@ -13,25 +14,21 @@ namespace OnlineStore.Controllers
     /// <summary>
     /// Контроллер для управления пользователями и их аутентификацией
     /// </summary>
+    /// <remarks>
+    /// Инициализирует новый экземпляр контроллера пользователей
+    /// </remarks>
+    /// <param name="userService">Сервис для работы с пользователями</param>
+    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
+    public class UsersController(
+        IUserService userService,
+        ApplicationDbContext context) : ControllerBase
     {
-        private readonly IUserService _userService;
-        private readonly ApplicationDbContext _context;
+        private readonly IUserService _userService = userService;
+        private readonly ApplicationDbContext _context = context;
 
-        /// <summary>
-        /// Инициализирует новый экземпляр контроллера пользователей
-        /// </summary>
-        /// <param name="userService">Сервис для работы с пользователями</param>
-        /// <param name="context">Контекст базы данных</param>
-        public UsersController(
-            IUserService userService,
-            ApplicationDbContext context)
-        {
-            _userService = userService;
-            _context = context;
-        }
+        
 
         /// <summary>
         /// Создает нового пользователя
@@ -278,14 +275,37 @@ namespace OnlineStore.Controllers
             UserLoginDto loginDto,
             CancellationToken cancellationToken = default)
         {
+            try
+            {
+                var user = await _userService.AuthenticateAsync(
+                    loginDto.Email,
+                    loginDto.Password,
+                    cancellationToken);
+
+                return Ok(user);
+            }
+            catch (AuthenticationException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+        }
+
+
+        [HttpGet("is-admin/{email}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<bool>> IsAdmin(
+            string email,
+            CancellationToken cancellationToken = default)
+        {
             var user = await _context.Users
-                .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Email == loginDto.Email, cancellationToken);
+                .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
-            if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
-                return Unauthorized("Неверный email или пароль.");
+            if (user == null)
+                return NotFound();
 
-            return ConvertToDto(user);
+            var adminEmails = new List<string> { "admin@example.com" }; 
+            return Ok(adminEmails.Contains(email.ToLower()));
         }
 
         /// <summary>
@@ -304,7 +324,7 @@ namespace OnlineStore.Controllers
         /// <param name="password">Пароль для проверки</param>
         /// <param name="storedHash">Хеш из базы данных</param>
         /// <returns>True если пароль верный, иначе False</returns>
-        private bool VerifyPassword(string password, string storedHash)
+        private static bool VerifyPassword(string password, string storedHash)
         {
             return HashPassword(password) == storedHash;
         }
@@ -333,7 +353,7 @@ namespace OnlineStore.Controllers
         /// </summary>
         /// <param name="password">Пароль для хеширования</param>
         /// <returns>Хеш пароля</returns>
-        private string HashPassword(string password)
+        private static string HashPassword(string password)
         {
             byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");
             return Convert.ToBase64String(KeyDerivation.Pbkdf2(

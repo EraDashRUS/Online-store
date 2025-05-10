@@ -23,6 +23,16 @@ namespace OnlineStore.Api.Controllers
             _productService = productService;
         }
 
+        [HttpGet("search")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ProductResponseDto>>> SearchProducts(
+            [FromQuery] ProductQueryDto query,
+            CancellationToken cancellationToken)
+        {
+            var products = await _productService.GetProductsAsync(query, cancellationToken);
+            return Ok(products);
+        }
+
         /// <summary>
         /// Получает список всех товаров
         /// </summary>

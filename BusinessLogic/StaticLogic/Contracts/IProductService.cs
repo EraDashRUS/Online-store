@@ -10,7 +10,12 @@ namespace OnlineStore.BusinessLogic.StaticLogic.Contracts
     /// </summary>
     public interface IProductService
     {
-        
+
+
+        Task<IEnumerable<ProductResponseDto>> GetProductsAsync(
+            ProductQueryDto query,
+            CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Получение продукта по ID
         /// </summary>
@@ -67,6 +72,6 @@ namespace OnlineStore.BusinessLogic.StaticLogic.Contracts
         /// <param name="quantity">Количество для уменьшения</param>
         /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>true если операция прошла успешно, иначе false</returns>
-        Task<bool> ReduceStockAsync(int productId, int quantity, CancellationToken cancellationToken = default);
+        Task<bool> ReduceStockAsync(int productId, int quantity, CancellationToken cancellationToken);
     }
 }

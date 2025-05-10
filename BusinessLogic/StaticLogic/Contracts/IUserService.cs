@@ -26,5 +26,12 @@ namespace OnlineStore.BusinessLogic.StaticLogic.Contracts
         /// <returns>DTO пользователя</returns>
         /// <exception cref="NotFoundException">Пользователь не найден</exception>
         Task<UserResponseDto> GetUserByIdAsync(int id, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Аутентифицирует пользователя
+        /// </summary>
+        /// <exception cref="AuthenticationException">Неверный email или пароль</exception>
+        Task<UserResponseDto> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default);
+
     }
 }

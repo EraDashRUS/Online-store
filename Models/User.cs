@@ -51,12 +51,12 @@ namespace OnlineStore.Models
         /// <summary>
         /// Список корзин пользователя.
         /// </summary>
-        public List<Cart> Carts { get; set; } = new();
+        public List<Cart> Carts { get; set; } = [];
 
         /// <summary>
         /// Навигационные свойства
         /// </summary>
         public Cart Cart { get; set; }
-        public List<Order> Orders { get; set; } = new();
+        public List<Order> Orders { get; set; } = [];
     }
 }

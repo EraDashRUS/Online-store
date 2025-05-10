@@ -30,6 +30,9 @@ namespace OnlineStore.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
@@ -57,6 +60,9 @@ namespace OnlineStore.Migrations
                     b.Property<int>("CartId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CartId1")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
@@ -66,6 +72,8 @@ namespace OnlineStore.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CartId");
+
+                    b.HasIndex("CartId1");
 
                     b.HasIndex("ProductId");
 
@@ -251,6 +259,10 @@ namespace OnlineStore.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("OnlineStore.Models.Cart", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CartId1");
+
                     b.HasOne("OnlineStore.Models.Product", "Product")
                         .WithMany("CartItems")
                         .HasForeignKey("ProductId")
@@ -296,6 +308,8 @@ namespace OnlineStore.Migrations
             modelBuilder.Entity("OnlineStore.Models.Cart", b =>
                 {
                     b.Navigation("CartItems");
+
+                    b.Navigation("Items");
 
                     b.Navigation("Order")
                         .IsRequired();

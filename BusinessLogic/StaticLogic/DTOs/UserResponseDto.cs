@@ -44,5 +44,10 @@
         /// Список идентификаторов всех корзин пользователя
         /// </summary>
         public List<int> CartIds { get; set; }
+
+        /// <summary>
+        /// Показатель, является ли пользователь администратором
+        /// </summary>
+        public bool IsAdmin { get; set; }
     }
 }

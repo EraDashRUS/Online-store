@@ -9,20 +9,15 @@ namespace OnlineStore.Api.Controllers
     /// <summary>
     /// Контроллер для работы с элементами корзины покупок
     /// </summary>
+    /// <remarks>
+    /// Инициализирует новый экземпляр <see cref="CartItemsController"/>
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
-    public class CartItemsController : ControllerBase
+    public class CartItemsController(ApplicationDbContext context) : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-
-        /// <summary>
-        /// Инициализирует новый экземпляр <see cref="CartItemsController"/>
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        public CartItemsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationDbContext _context = context;
 
         /// <summary>
         /// Получает все элементы корзины с информацией о товарах и корзинах
@@ -145,7 +140,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="product">Товар</param>
         /// <param name="quantity">Запрашиваемое количество</param>
         /// <returns>True если товара достаточно, иначе False</returns>
-        private bool CheckStock(Product product, int quantity)
+        private static bool CheckStock(Product product, int quantity)
         {
             return product.StockQuantity >= quantity;
         }
@@ -176,7 +171,7 @@ namespace OnlineStore.Api.Controllers
         /// </summary>
         /// <param name="item">Элемент корзины</param>
         /// <returns>Объект ответа</returns>
-        private object MapToResponse(CartItem item)
+        private static object MapToResponse(CartItem item)
         {
             return new { item.Id, item.CartId, item.ProductId, item.Quantity };
         }

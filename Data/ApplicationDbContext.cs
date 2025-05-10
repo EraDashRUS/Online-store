@@ -1,18 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineStore.Models;
 using OnlineStore.Models.OnlineStore.Models;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace OnlineStore.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-        {
-        }
-
-
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<Cart> Carts { get; set; }

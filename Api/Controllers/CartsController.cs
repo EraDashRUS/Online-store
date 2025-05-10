@@ -8,20 +8,15 @@ namespace OnlineStore.Api.Controllers
     /// <summary>
     /// Контроллер для управления корзинами покупок
     /// </summary>
+    /// <remarks>
+    /// Инициализирует новый экземпляр контроллера корзин
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
-    public class CartsController : ControllerBase
+    public class CartsController(ApplicationDbContext context) : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-
-        /// <summary>
-        /// Инициализирует новый экземпляр контроллера корзин
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        public CartsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationDbContext _context = context;
 
         /// <summary>
         /// Получает список всех корзин с пользователями и товарами
