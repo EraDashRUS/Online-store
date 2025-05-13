@@ -91,33 +91,19 @@ namespace OnlineStore.Migrations
                     b.Property<DateTime>("DeliveryDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Deliveries");
-                });
-
-            modelBuilder.Entity("OnlineStore.Models.OnlineStore.Models.Payment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("PaymentDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Payments");
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("Deliveries");
                 });
 
             modelBuilder.Entity("OnlineStore.Models.Order", b =>
@@ -135,13 +121,13 @@ namespace OnlineStore.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("DeliveryId")
+                    b.Property<int?>("DeliveryId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("PaymentId")
+                    b.Property<int?>("PaymentId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Status")
@@ -159,15 +145,38 @@ namespace OnlineStore.Migrations
                     b.HasIndex("CartId")
                         .IsUnique();
 
-                    b.HasIndex("DeliveryId")
-                        .IsUnique();
-
-                    b.HasIndex("PaymentId")
-                        .IsUnique();
-
                     b.HasIndex("UserId");
 
                     b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("OnlineStore.Models.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("OnlineStore.Models.Product", b =>
@@ -274,23 +283,22 @@ namespace OnlineStore.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("OnlineStore.Models.Delivery", b =>
+                {
+                    b.HasOne("OnlineStore.Models.Order", "Order")
+                        .WithOne("Delivery")
+                        .HasForeignKey("OnlineStore.Models.Delivery", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("OnlineStore.Models.Order", b =>
                 {
                     b.HasOne("OnlineStore.Models.Cart", "Cart")
                         .WithOne("Order")
                         .HasForeignKey("OnlineStore.Models.Order", "CartId");
-
-                    b.HasOne("OnlineStore.Models.Delivery", "Delivery")
-                        .WithOne("Order")
-                        .HasForeignKey("OnlineStore.Models.Order", "DeliveryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("OnlineStore.Models.OnlineStore.Models.Payment", "Payment")
-                        .WithOne("Order")
-                        .HasForeignKey("OnlineStore.Models.Order", "PaymentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.HasOne("OnlineStore.Models.User", null)
                         .WithMany("Orders")
@@ -299,10 +307,17 @@ namespace OnlineStore.Migrations
                         .IsRequired();
 
                     b.Navigation("Cart");
+                });
 
-                    b.Navigation("Delivery");
+            modelBuilder.Entity("OnlineStore.Models.Payment", b =>
+                {
+                    b.HasOne("OnlineStore.Models.Order", "Order")
+                        .WithOne("Payment")
+                        .HasForeignKey("OnlineStore.Models.Payment", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("Payment");
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("OnlineStore.Models.Cart", b =>
@@ -315,16 +330,11 @@ namespace OnlineStore.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OnlineStore.Models.Delivery", b =>
+            modelBuilder.Entity("OnlineStore.Models.Order", b =>
                 {
-                    b.Navigation("Order")
-                        .IsRequired();
-                });
+                    b.Navigation("Delivery");
 
-            modelBuilder.Entity("OnlineStore.Models.OnlineStore.Models.Payment", b =>
-                {
-                    b.Navigation("Order")
-                        .IsRequired();
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("OnlineStore.Models.Product", b =>

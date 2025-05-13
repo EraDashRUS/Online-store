@@ -10,18 +10,12 @@ namespace OnlineStore.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrdersController : ControllerBase
+    public class OrdersController(
+        ApplicationDbContext context,
+        IOrderService orderService) : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IOrderService _orderService;
-
-        public OrdersController(
-            ApplicationDbContext context,
-            IOrderService orderService)
-        {
-            _context = context;
-            _orderService = orderService;
-        }
+        private readonly ApplicationDbContext _context = context;
+        private readonly IOrderService _orderService = orderService;
 
         /// <summary>
         /// Получает список всех заказов
@@ -99,6 +93,8 @@ namespace OnlineStore.Api.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<Order>> PostOrder(Order order, CancellationToken cancellationToken)
         {
+           
+
             _context.Orders.Add(order);
             await _context.SaveChangesAsync(cancellationToken);
             return CreatedAtAction("GetOrder", new { id = order.Id }, order);

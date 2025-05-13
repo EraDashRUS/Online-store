@@ -11,24 +11,18 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
     /// <summary>
     /// Сервис для администрирования заказов
     /// </summary>
-    public class AdminOrderService : IAdminOrderService
+    /// <remarks>
+    /// Инициализирует новый экземпляр сервиса администрирования заказов
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
+    /// <param name="productService">Сервис для работы с товарами</param>
+    public class AdminOrderService(
+        ApplicationDbContext context,
+        IProductService productService) : IAdminOrderService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IProductService _productService;
-        private readonly Dictionary<int, string> _tempComments = new();
-
-        /// <summary>
-        /// Инициализирует новый экземпляр сервиса администрирования заказов
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        /// <param name="productService">Сервис для работы с товарами</param>
-        public AdminOrderService(
-            ApplicationDbContext context,
-            IProductService productService)
-        {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _productService = productService ?? throw new ArgumentNullException(nameof(productService));
-        }
+        private readonly ApplicationDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
+        private readonly IProductService _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+        private readonly Dictionary<int, string> _tempComments = [];
 
         /// <summary>
         /// Подтверждает заказ

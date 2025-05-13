@@ -13,20 +13,15 @@ namespace OnlineStore.Api.Controllers
     /// <summary>
     /// Контроллер для управления доставками
     /// </summary>
+    /// <remarks>
+    /// Инициализирует новый экземпляр контроллера доставок
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
-    public class DeliveriesController : ControllerBase
+    public class DeliveriesController(ApplicationDbContext context) : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-
-        /// <summary>
-        /// Инициализирует новый экземпляр контроллера доставок
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        public DeliveriesController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationDbContext _context = context;
 
         /// <summary>
         /// Получает список всех доставок

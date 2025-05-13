@@ -1,32 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.Data;
-using OnlineStore.Models.OnlineStore.Models;
+using OnlineStore.Models;
 
 namespace OnlineStore.Api.Controllers
 {
     /// <summary>
     /// Контроллер для управления платежами
     /// </summary>
+    /// <remarks>
+    /// Инициализирует новый экземпляр контроллера платежей
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
-    public class PaymentsController : ControllerBase
+    public class PaymentsController(ApplicationDbContext context) : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-
-        /// <summary>
-        /// Инициализирует новый экземпляр контроллера платежей
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        public PaymentsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationDbContext _context = context;
 
         /// <summary>
         /// Получает список всех платежей
@@ -114,13 +104,46 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Созданный платеж</returns>
         /// <response code="201">Платеж успешно создан</response>
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<Payment>> PostPayment(Payment payment, CancellationToken cancellationToken)
+        public async Task<ActionResult<Payment>> CreatePayment([FromBody] CreatePaymentDto dto)
         {
-            _context.Payments.Add(payment);
-            await _context.SaveChangesAsync(cancellationToken);
+            // Проверяем существование заказа
+            var order = await _context.Orders.FindAsync(dto.OrderId);
+            if (order == null) return NotFound("Заказ не найден");
 
-            return CreatedAtAction("GetPayment", new { id = payment.Id }, payment);
+            // Если для заказа уже есть платеж
+            if (order.PaymentId != null)
+            {
+                var existingPayment = await _context.Payments.FindAsync(order.PaymentId);
+                if (existingPayment != null)
+                {
+                    return Conflict("Платеж для этого заказа уже существует");
+                }
+            }
+
+            var payment = new Payment
+            {
+                Status = dto.Status,
+                Amount = dto.Amount,
+                OrderId = dto.OrderId,
+                PaymentDate = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                
+                order.PaymentId = payment.Id;
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetPayment), new { id = payment.Id }, payment);
+            }
+            catch (DbUpdateException ex)
+            {
+                return BadRequest($"Ошибка при сохранении платежа: {ex.Message}");
+            }
         }
 
         /// <summary>

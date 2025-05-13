@@ -1,4 +1,4 @@
-﻿using OnlineStore.Models.OnlineStore.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OnlineStore.Models
 {
@@ -35,12 +35,12 @@ namespace OnlineStore.Models
         /// <summary>
         /// Идентификатор связанной доставки.
         /// </summary>
-        public int DeliveryId { get; set; }
+        public int? DeliveryId { get; set; }
 
         /// <summary>
         /// Идентификатор связанного платежа.
         /// </summary>
-        public int PaymentId { get; set; }
+        public int? PaymentId { get; set; }
 
         /// <summary>
         /// Идентификатор пользователя, оформившего заказ.
@@ -55,16 +55,19 @@ namespace OnlineStore.Models
         /// <summary>
         /// Навигационное свойство для доставки.
         /// </summary>
-        public Delivery Delivery { get; set; }
+        [ForeignKey("DeliveryId")]
+        public Delivery? Delivery { get; set; }
 
         /// <summary>
         /// Навигационное свойство для платежа.
         /// </summary>
-        public Payment Payment { get; set; }
+        [ForeignKey("PaymentId")]
+        public Payment? Payment { get; set; }
 
         /// <summary>
         /// Навигационное свойство для корзины (может быть null).
         /// </summary>
-        public Cart Cart { get; set; }
+        
+        public Cart? Cart { get; set; }
     }
 }

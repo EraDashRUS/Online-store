@@ -20,6 +20,10 @@
         /// </summary>
         public DateTime DeliveryDate { get; set; }
 
+
+        public int OrderId { get; set; }
+
+
         /// <summary>
         /// Заказ (навигационное свойство).
         /// </summary>

@@ -2,32 +2,24 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
-using Microsoft.AspNetCore.Authorization;
-using System.Threading;
 
 namespace OnlineStore.Api.Controllers
 {
     /// <summary>
     /// Контроллер для управления заказами администратором
     /// </summary>
+    /// <remarks>
+    /// Создает новый экземпляр контроллера
+    /// </remarks>
+    /// <param name="orderService">Сервис заказов</param>
+    /// <param name="adminService">Сервис администрирования заказов</param>
     [Route("api/admin/orders")]
     [ApiController] 
     [TypeFilter(typeof(AdminEmailFilter))]
-    public class AdminOrdersController : ControllerBase
+    public class AdminOrdersController(IOrderService orderService, IAdminOrderService adminService) : ControllerBase
     {
-        private readonly IOrderService _orderService;
-        private readonly IAdminOrderService _adminService;
-
-        /// <summary>
-        /// Создает новый экземпляр контроллера
-        /// </summary>
-        /// <param name="orderService">Сервис заказов</param>
-        /// <param name="adminService">Сервис администрирования заказов</param>
-        public AdminOrdersController(IOrderService orderService, IAdminOrderService adminService)
-        {
-            _orderService = orderService;
-            _adminService = adminService;
-        }
+        private readonly IOrderService _orderService = orderService;
+        private readonly IAdminOrderService _adminService = adminService;
 
         /// <summary>
         /// Подтверждает заказ

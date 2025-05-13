@@ -15,27 +15,20 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
     /// <summary>
     /// Сервис для работы с пользователями
     /// </summary>
-    public class UserService : IUserService
+    /// <remarks>
+    /// Инициализирует новый экземпляр класса UserService
+    /// </remarks>
+    /// <param name="context">Контекст базы данных</param>
+    /// <param name="userRepository">Репозиторий пользователей</param>
+    /// <param name="adminSettings">Настройки администраторов</param>
+    public class UserService(
+        ApplicationDbContext context,
+        IRepository<User> userRepository,
+        IOptions<AdminSettings> adminSettings) : IUserService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IRepository<User> _userRepository;
-        private readonly List<string> _adminEmails;
-
-        /// <summary>
-        /// Инициализирует новый экземпляр класса UserService
-        /// </summary>
-        /// <param name="context">Контекст базы данных</param>
-        /// <param name="userRepository">Репозиторий пользователей</param>
-        /// <param name="adminSettings">Настройки администраторов</param>
-        public UserService(
-            ApplicationDbContext context,
-            IRepository<User> userRepository,
-            IOptions<AdminSettings> adminSettings)
-        {
-            _context = context;
-            _userRepository = userRepository;
-            _adminEmails = adminSettings.Value.AdminEmails;
-        }
+        private readonly ApplicationDbContext _context = context;
+        private readonly IRepository<User> _userRepository = userRepository;
+        private readonly List<string> _adminEmails = adminSettings.Value.AdminEmails;
 
         /// <summary>
         /// Создает нового пользователя
@@ -89,10 +82,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 .Include(u => u.Cart)
                 .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-            if (user == null)
-                throw new NotFoundException("Пользователь не найден");
-
-            return ConvertToDto(user);
+            return user == null ? throw new NotFoundException("Пользователь не найден") : ConvertToDto(user);
         }
 
         /// <summary>

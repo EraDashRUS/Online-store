@@ -1,31 +1,26 @@
-﻿namespace OnlineStore.Models
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+
+namespace OnlineStore.Models
 {
-    namespace OnlineStore.Models
+    public class Payment
     {
-        /// <summary>
-        /// Оплата.
-        /// </summary>
-        public class Payment
-        {
-            /// <summary>
-            /// Идентификатор оплаты.
-            /// </summary>
-            public int Id { get; set; }
+        public int Id { get; set; }
 
-            /// <summary>
-            /// Статус оплаты.
-            /// </summary>
-            public string Status { get; set; }
+        [Required]
+        public string Status { get; set; }
 
-            /// <summary>
-            /// Дата оплаты
-            /// </summary>
-            public DateTime PaymentDate { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Amount { get; set; }
 
-            /// <summary>
-            /// Заказ (навигационное свойство).
-            /// </summary>
-            public Order Order { get; set; } 
-        }
+        public DateTime PaymentDate { get; set; }
+
+        [Required]
+        public int OrderId { get; set; }
+
+        [JsonIgnore]
+        [ForeignKey("OrderId")]
+        public virtual Order? Order { get; set; }
     }
 }

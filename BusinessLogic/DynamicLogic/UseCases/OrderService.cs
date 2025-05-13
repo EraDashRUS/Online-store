@@ -70,7 +70,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// <exception cref="NotFoundException">Заказ не найден</exception>
         public async Task<OrderDto> GetOrderAsync(int cartId, CancellationToken cancellationToken)
         {
-            var cart = await _context.Carts.FindAsync(cartId);
+            var cart = await _context.Carts.FindAsync(new object?[] { cartId }, cancellationToken: cancellationToken);
 
             if (cart == null) throw new NotFoundException("Cart not found");
 
@@ -171,11 +171,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             CancellationToken cancellationToken)
         {
             var cart = await _context.Carts
-                .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken);
-
-            if (cart == null)
-                throw new NotFoundException("Order not found");
-
+                .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken) ?? throw new NotFoundException("Order not found");
             var currentItems = await _context.CartItems
                 .Where(ci => ci.CartId == cartId)
                 .ToListAsync(cancellationToken);
@@ -184,34 +180,6 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             await _context.SaveChangesAsync(cancellationToken);
 
             return await GetOrderAsync(cartId, cancellationToken);
-        }
-
-        /// <summary>
-        /// Преобразует корзину в DTO заказа
-        /// </summary>
-        /// <param name="cart">Корзина</param>
-        /// <returns>DTO заказа</returns>
-        private async Task<OrderDto> MapCartToOrderDto(Cart cart)
-        {
-            var cartItems = await _context.CartItems
-                .Where(ci => ci.CartId == cart.Id)
-                .Include(ci => ci.Product)
-                .ToListAsync();
-
-            return new OrderDto
-            {
-                CartId = cart.Id,
-                UserId = cart.UserId,
-                Status = cart.Status ?? "Pending",
-                TotalAmount = cartItems.Sum(ci => ci.Quantity * ci.Product.Price),
-                Items = cartItems.Select(ci => new OrderItemDto
-                {
-                    ProductId = ci.ProductId,
-                    ProductName = ci.Product.Name,
-                    Quantity = ci.Quantity,
-                    UnitPrice = ci.Product.Price
-                }).ToList()
-            };
         }
 
         /// <summary>
@@ -240,7 +208,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// </summary>
         /// <param name="cartId">Идентификатор корзины</param>
         /// <returns>Комментарий администратора</returns>
-        private string? GetTemporaryAdminComment(int cartId)
+        private static string? GetTemporaryAdminComment(int cartId)
         {
             return cartId % 2 == 0 ? "Проверенный заказ" : null;
         }

@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineStore.Models;
-using OnlineStore.Models.OnlineStore.Models;
 
 namespace OnlineStore.Data
 {
@@ -16,17 +15,17 @@ namespace OnlineStore.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            //Order → Delivery (1:1)
+            // Order -> Delivery (один-к-одному)
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Delivery)
                 .WithOne(d => d.Order)
-                .HasForeignKey<Order>(o => o.DeliveryId);
+                .HasForeignKey<Delivery>(d => d.OrderId);
 
-            //Order → Payment (1:1)
+            // Order -> Payment (один-к-одному)
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Payment)
                 .WithOne(p => p.Order)
-                .HasForeignKey<Order>(o => o.PaymentId);
+                .HasForeignKey<Payment>(p => p.OrderId);
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Cart)
