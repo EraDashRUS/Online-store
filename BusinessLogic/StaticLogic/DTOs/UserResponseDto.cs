@@ -35,15 +35,7 @@
         /// </summary>
         public string? Address { get; set; }
 
-        /// <summary>
-        /// Идентификатор текущей корзины пользователя
-        /// </summary>
-        public int CartId { get; set; }
-
-        /// <summary>
-        /// Список идентификаторов всех корзин пользователя
-        /// </summary>
-        public List<int> CartIds { get; set; }
+        public List<CartDto> ActiveCarts { get; set; } = new();
 
         /// <summary>
         /// Показатель, является ли пользователь администратором

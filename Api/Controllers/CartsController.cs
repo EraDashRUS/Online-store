@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 
 namespace OnlineStore.Api.Controllers
 {

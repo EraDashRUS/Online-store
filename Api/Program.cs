@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using OnlineStore.Data;
 using FluentValidation.AspNetCore;
 using FluentValidation;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
@@ -8,8 +7,9 @@ using OnlineStore.BusinessLogic.StaticLogic.Validators;
 using OnlineStore.BusinessLogic.DynamicLogic.Services;
 using System.Text.Json.Serialization;
 using OnlineStore.BusinessLogic.StaticLogic.Settings;
-using OnlineStore.Models;
 using System.Security.Claims;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 
 /// <summary>
 /// Точка входа в приложение

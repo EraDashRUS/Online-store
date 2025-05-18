@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 
 namespace OnlineStore.Api.Controllers
 {

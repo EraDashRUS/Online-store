@@ -2,8 +2,8 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 using System.Threading;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
@@ -51,7 +51,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         public async Task RejectOrderAsync(int cartId, string? adminComment, CancellationToken cancellationToken)
         {
             var cart = await _context.Carts
-                .Include(c => c.Items)
+                .Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken);
 
             if (cart == null) throw new NotFoundException("Заказ не найден");
@@ -83,7 +83,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// </summary>
         private async Task RestockItemsAsync(Cart cart, CancellationToken cancellationToken)
         {
-            foreach (var item in cart.Items)
+            foreach (var item in cart.CartItems)
             {
                 await _productService.ReduceStockAsync(
                     item.ProductId,
@@ -99,7 +99,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         {
             return await _context.Carts
                 .Where(c => c.Status == "Approved")
-                .SelectMany(c => c.Items)
+                .SelectMany(c => c.CartItems)
                 .SumAsync(i => i.Quantity * i.Product.Price, cancellationToken);
         }
 

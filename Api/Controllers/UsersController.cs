@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Authentication;
 using System.Text;
@@ -28,7 +29,7 @@ namespace OnlineStore.Controllers
         private readonly IUserService _userService = userService;
         private readonly ApplicationDbContext _context = context;
 
-        
+
 
         /// <summary>
         /// Создает нового пользователя
@@ -39,15 +40,13 @@ namespace OnlineStore.Controllers
         /// <response code="201">Пользователь успешно создан</response>
         /// <response code="400">Некорректные данные</response>
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<UserResponseDto>> CreateUserAsync(
-            UserCreateDto userDto,
-            CancellationToken cancellationToken = default)
+        public async Task<ActionResult<UserDetailDto>> CreateUserAsync(UserCreateDto userDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
+                // Создаем пользователя
                 var user = new User
                 {
                     FirstName = userDto.FirstName,
@@ -58,15 +57,27 @@ namespace OnlineStore.Controllers
                     Address = userDto.Address
                 };
 
-                await _context.Users.AddAsync(user, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
 
-                var cart = new Cart { UserId = user.Id };
-                await _context.Carts.AddAsync(cart, cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
+                // Создаем корзину с явным статусом
+                var cart = new Cart
+                {
+                    UserId = user.Id,
+                    Status = "Active" // Явно устанавливаем статус
+                };
 
-                await transaction.CommitAsync(cancellationToken);
-                return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ConvertToDto(user));
+                await _context.Carts.AddAsync(cart);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                // Полноценная загрузка данных перед возвратом
+                var createdUser = await _context.Users
+                    .Include(u => u.Carts)
+                    .FirstOrDefaultAsync(u => u.Id == user.Id);
+
+                return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, ConvertToDetailDto(createdUser));
             }
             catch
             {
@@ -84,20 +95,17 @@ namespace OnlineStore.Controllers
         /// <response code="200">Пользователь найден</response>
         /// <response code="404">Пользователь не найден</response>
         [HttpGet("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<UserResponseDto>> GetUser(
-            int id,
-            CancellationToken cancellationToken = default)
+        public async Task<ActionResult<UserDetailDto>> GetUserById(int id)
         {
             var user = await _context.Users
-                .Include(u => u.Cart)
-                .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+                .Include(u => u.Carts)
+                    .ThenInclude(c => c.CartItems)
+                        .ThenInclude(ci => ci.Product)
+                .FirstOrDefaultAsync(u => u.Id == id);
 
-            if (user == null)
-                return NotFound();
+            if (user == null) return NotFound();
 
-            return ConvertToDto(user);
+            return ConvertToDetailDto(user);
         }
 
         /// <summary>
@@ -107,14 +115,14 @@ namespace OnlineStore.Controllers
         /// <returns>Список пользователей</returns>
         /// <response code="200">Успешно возвращен список пользователей</response>
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsers(
-            CancellationToken cancellationToken = default)
+        public async Task<ActionResult<List<UserBriefDto>>> GetAllUsers()
         {
-            return await _context.Users
-                .Include(u => u.Cart)
-                .Select(u => ConvertToDto(u))
-                .ToListAsync(cancellationToken);
+            var users = await _context.Users
+                .Include(u => u.Carts)
+                    .ThenInclude(c => c.CartItems)
+                .ToListAsync();
+
+            return users.Select(ConvertToBriefDto).ToList();
         }
 
         /// <summary>
@@ -255,7 +263,7 @@ namespace OnlineStore.Controllers
             await _context.Carts.AddAsync(cart, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, ConvertToDto(user));
+            return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, ConvertToDto(user));
         }
 
         /// <summary>
@@ -336,7 +344,54 @@ namespace OnlineStore.Controllers
         /// <returns>DTO пользователя</returns>
         private static UserResponseDto ConvertToDto(User user)
         {
+            if (user == null) return null;
+
             return new UserResponseDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName ?? string.Empty,
+                LastName = user.LastName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Phone = user.Phone ?? string.Empty,
+                Address = user.Address ?? string.Empty,
+                ActiveCarts = user.Carts?
+                    .Where(c => c != null && c.Status == "Active")
+                    .Select(c => new CartDto
+                    {
+                        Id = c.Id,
+                        Status = c.Status ?? string.Empty,
+                        Items = c.CartItems?
+                            .Where(ci => ci != null)
+                            .Select(ci => new CartItemDto
+                            {
+                                Id = ci.Id,
+                                Quantity = ci.Quantity,
+                                ProductId = ci.ProductId,
+                                ProductName = ci.Product?.Name ?? "Товар не найден",
+                                ProductPrice = ci.Product?.Price ?? 0
+                            }).ToList() ?? new List<CartItemDto>()
+                    }).ToList() ?? new List<CartDto>()
+            };
+        }
+
+        private static UserBriefDto ConvertToBriefDto(User user)
+        {
+            return new UserBriefDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                ActiveCarts = user.Carts
+                    .Where(c => c.Status == "Active")
+                    .Select(c => new CartBriefDto { Id = c.Id })
+                    .ToList()
+            };
+        }
+
+        private static UserDetailDto ConvertToDetailDto(User user)
+        {
+            return new UserDetailDto
             {
                 Id = user.Id,
                 FirstName = user.FirstName,
@@ -344,8 +399,45 @@ namespace OnlineStore.Controllers
                 Email = user.Email,
                 Phone = user.Phone,
                 Address = user.Address,
-                CartId = user.Cart?.Id ?? 0
+                ActiveCarts = user.Carts?
+                    .Where(c => c.Status == "Active")
+                    .Select(c => new CartDto
+                    {
+                        Id = c.Id,
+                        Status = c.Status,
+                        Items = c.CartItems?
+                            .Select(ci => new CartItemDto
+                            {
+                                Id = ci.Id,
+                                Quantity = ci.Quantity,
+                                ProductId = ci.ProductId,
+                                ProductName = ci.Product?.Name ?? "Товар удален"
+                            }).ToList() ?? new List<CartItemDto>()
+                    }).ToList() ?? new List<CartDto>()
             };
+        }
+
+        [HttpGet("{userId}/carts")]
+        public async Task<ActionResult<List<CartDto>>> GetUserCarts(int userId)
+        {
+            var carts = await _context.Carts
+                .Where(c => c.UserId == userId)
+                .Include(c => c.CartItems)
+                    .ThenInclude(ci => ci.Product)
+                .ToListAsync();
+
+            return carts.Select(c => new CartDto
+            {
+                Id = c.Id,
+                Status = c.Status,
+                Items = c.CartItems.Select(ci => new CartItemDto
+                {
+                    Id = ci.Id,
+                    Quantity = ci.Quantity,
+                    ProductId = ci.ProductId,
+                    ProductName = ci.Product?.Name ?? "Товар удален"
+                }).ToList()
+            }).ToList();
         }
 
         /// <summary>

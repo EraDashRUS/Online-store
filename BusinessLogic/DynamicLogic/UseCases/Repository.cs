@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
-using OnlineStore.Data;
+using OnlineStore.Storage.Data;
 using System.Linq.Expressions;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services

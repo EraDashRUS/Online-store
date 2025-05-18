@@ -2,8 +2,8 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {

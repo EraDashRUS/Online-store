@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -109,13 +110,43 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Созданная доставка</returns>
         /// <response code="201">Доставка успешно создана</response>
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<Delivery>> PostDelivery(Delivery delivery, CancellationToken cancellationToken)
+        public async Task<ActionResult<DeliveryResponseDto>> CreateDelivery(
+    [FromBody] CreateDeliveryDto dto)
         {
-            _context.Deliveries.Add(delivery);
-            await _context.SaveChangesAsync(cancellationToken);
+            // Проверка существования заказа
+            var order = await _context.Orders.FindAsync(dto.OrderId);
+            if (order == null) return NotFound("Заказ не найден");
 
-            return CreatedAtAction("GetDelivery", new { id = delivery.Id }, delivery);
+            var delivery = new Delivery
+            {
+                Status = dto.Status,
+                DeliveryDate = dto.DeliveryDate,
+                OrderId = dto.OrderId
+            };
+
+            _context.Deliveries.Add(delivery);
+
+            // Обновляем заказ
+            order.DeliveryId = delivery.Id;
+            order.OrderDate = DateTime.UtcNow; // Устанавливаем текущую дату
+
+            await _context.SaveChangesAsync();
+
+            // Возвращаем DTO вместо модели
+            return Ok(new DeliveryResponseDto
+            {
+                Id = delivery.Id,
+                Status = delivery.Status,
+                DeliveryDate = delivery.DeliveryDate,
+                OrderId = delivery.OrderId,
+                Order = new OrderBriefDto
+                {
+                    Id = order.Id,
+                    OrderDate = order.OrderDate,
+                    Status = order.Status,
+                    TotalAmount = order.TotalAmount
+                }
+            });
         }
 
         /// <summary>

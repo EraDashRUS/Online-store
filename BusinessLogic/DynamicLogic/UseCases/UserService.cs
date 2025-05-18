@@ -5,8 +5,8 @@ using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.BusinessLogic.StaticLogic.Settings;
-using OnlineStore.Data;
-using OnlineStore.Models;
+using OnlineStore.Storage.Data;
+using OnlineStore.Storage.Models;
 using System.Security.Authentication;
 using System.Text;
 
@@ -125,15 +125,33 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// <returns>DTO пользователя</returns>
         private static UserResponseDto ConvertToDto(User user)
         {
+            if (user == null) return null;
+
             return new UserResponseDto
             {
                 Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Phone = user.Phone,
-                Address = user.Address,
-                CartId = user.Cart?.Id ?? 0
+                FirstName = user.FirstName ?? string.Empty,
+                LastName = user.LastName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Phone = user.Phone ?? string.Empty,
+                Address = user.Address ?? string.Empty,
+                ActiveCarts = user.Carts?
+                    .Where(c => c != null && c.Status == "Active")
+                    .Select(c => new CartDto
+                    {
+                        Id = c.Id,
+                        Status = c.Status ?? string.Empty,
+                        Items = c.CartItems?
+                            .Where(ci => ci != null)
+                            .Select(ci => new CartItemDto
+                            {
+                                Id = ci.Id,
+                                Quantity = ci.Quantity,
+                                ProductId = ci.ProductId,
+                                ProductName = ci.Product?.Name ?? "Товар не найден",
+                                ProductPrice = ci.Product?.Price ?? 0
+                            }).ToList() ?? new List<CartItemDto>()
+                    }).ToList() ?? new List<CartDto>()
             };
         }
 

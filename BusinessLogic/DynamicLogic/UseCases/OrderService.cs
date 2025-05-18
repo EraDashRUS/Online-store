@@ -2,8 +2,8 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
-using OnlineStore.Data;
 using OnlineStore.Models;
+using OnlineStore.Storage.Data;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
@@ -35,12 +35,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         {
             var cart = await _context.Carts
                 .Include(c => c.User)
-                .Include(c => c.Items)
+                .Include(c => c.CartItems)
                 .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken);
 
             if (cart == null) throw new NotFoundException("Корзина не найдена");
-            if (!cart.Items.Any()) throw new InvalidOperationException("Корзина пуста");
+            if (!cart.CartItems.Any()) throw new InvalidOperationException("Корзина пуста");
 
             cart.Status = "Pending";
             await _context.SaveChangesAsync(cancellationToken);
@@ -50,14 +50,14 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 CartId = cart.Id,
                 UserId = cart.UserId,
                 Status = cart.Status,
-                Items = cart.Items.Select(i => new OrderItemDto
+                Items = cart.CartItems.Select(i => new OrderItemDto
                 {
                     ProductId = i.ProductId,
                     ProductName = i.Product.Name,
                     Quantity = i.Quantity,
                     UnitPrice = i.Product.Price
                 }).ToList(),
-                TotalAmount = cart.Items.Sum(i => i.Quantity * i.Product.Price)
+                TotalAmount = cart.CartItems.Sum(i => i.Quantity * i.Product.Price)
             };
         }
 
