@@ -26,5 +26,8 @@ namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
         /// Общая стоимость корзины
         /// </summary>
         public decimal TotalPrice { get; set; }
+
+
+        public string Status { get; set; }
     }
 }

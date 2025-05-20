@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
+using System.Security.Claims;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -109,12 +111,66 @@ namespace OnlineStore.Api.Controllers
         /// <response code="201">Корзина успешно создана</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<Cart>> PostCart(Cart cart, CancellationToken cancellationToken)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<CartResponseDto>> CreateCart(
+    [FromBody] CartCreateDto dto,
+    CancellationToken cancellationToken)
         {
-            _context.Carts.Add(cart);
-            await _context.SaveChangesAsync(cancellationToken);
+            // 1. Проверяем, что пользователь существует
+            var user = await _context.Users.FindAsync(dto.UserId);
+            if (user == null)
+            {
+                return BadRequest("Пользователь не найден");
+            }
 
-            return CreatedAtAction("GetCart", new { id = cart.Id }, cart);
+            // 2. Создаём корзину
+            using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var cart = new Cart
+                {
+                    UserId = dto.UserId,  // Берём ID из DTO
+                    Status = "Active",
+                    CartItems = dto.Items.Select(i => new CartItem
+                    {
+                        ProductId = i.ProductId,
+                        Quantity = i.Quantity
+                    }).ToList()
+                };
+
+                await _context.Carts.AddAsync(cart, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // 3. Загружаем данные для ответа
+                var createdCart = await _context.Carts
+                    .Include(c => c.CartItems)
+                    .ThenInclude(ci => ci.Product)
+                    .FirstOrDefaultAsync(c => c.Id == cart.Id, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                // 4. Возвращаем ответ
+                return CreatedAtAction(
+                    nameof(GetCart),
+                    new { id = cart.Id },
+                    ConvertToCartResponseDto(createdCart));
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return StatusCode(500, $"Ошибка при создании корзины: {ex.Message}");
+            }
+        }
+
+        // Вспомогательный метод для маппинга
+        private CartResponseDto ConvertToCartResponseDto(Cart cart)
+        {
+            return new CartResponseDto
+            {
+                Id = cart.Id,
+                UserId = cart.UserId,
+                Status = cart.Status
+            };
         }
 
         /// <summary>
