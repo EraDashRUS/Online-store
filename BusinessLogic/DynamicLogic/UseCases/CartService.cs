@@ -167,22 +167,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 
             return cart == null
                 ? throw new NotFoundException($"Корзина с ID {cartId} не найдена или не принадлежит пользователю")
-                : new CartResponseDto
-            {
-                Id = cart.Id,
-                UserId = cart.UserId,
-                Items = cart.CartItems.Select(ci => new CartItemResponseDto
-                {
-                    Id = ci.Id,
-                    CartId = ci.CartId,
-                    ProductId = ci.ProductId,
-                    ProductName = ci.Product?.Name ?? "Неизвестный товар",
-                    ProductPrice = ci.Product?.Price ?? 0m,
-                    Quantity = ci.Quantity,
-                    IsAvailable = ci.Product?.StockQuantity > 0
-                }).ToList(),
-                TotalPrice = cart.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0m))
-            };
+                : MapToDto(cart);
         }
 
         /// <summary>
@@ -228,9 +213,10 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return new CartResponseDto
             {
                 Id = cart.Id,
+                Status = cart.Status ?? "Pending",
                 UserId = cart.UserId,
                 Items = cart.CartItems.Select(ConvertItemToDto).ToList(),
-                TotalPrice = cart.CartItems.Sum(i => i.Quantity * i.Product.Price)
+                TotalPrice = cart.CartItems.Sum(i => i.Quantity * (i.Product?.Price ?? 0))
             };
         }
 
@@ -244,12 +230,15 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             return new CartItemResponseDto
             {
                 Id = item.Id,
-                CartId = item.CartId,
-                ProductId = item.ProductId,
-                ProductName = item.Product?.Name ?? "Неизвестный товар",
-                ProductPrice = item.Product?.Price ?? 0m,
                 Quantity = item.Quantity,
-                IsAvailable = item.Product?.StockQuantity > 0
+                ProductId = item.ProductId,
+                Product = item.Product != null ? new ProductBriefDto
+                {
+                    Id = item.Product.Id,
+                    Name = item.Product.Name,
+                    Price = item.Product.Price,
+                    StockQuantity = item.Product.StockQuantity
+                } : null
             };
         }
 

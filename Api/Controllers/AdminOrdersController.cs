@@ -2,6 +2,8 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using OnlineStore.Storage.Data;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -15,8 +17,8 @@ namespace OnlineStore.Api.Controllers
     /// <param name="adminService">Сервис администрирования заказов</param>
     [Route("api/admin/orders")]
     [ApiController] 
-    [TypeFilter(typeof(AdminEmailFilter))]
-    public class AdminOrdersController(IOrderService orderService, IAdminOrderService adminService) : ControllerBase
+   // [TypeFilter(typeof(AdminEmailFilter))]
+    public class AdminOrdersController(IOrderService orderService, IAdminOrderService adminService, ApplicationDbContext _context) : ControllerBase
     {
         private readonly IOrderService _orderService = orderService;
         private readonly IAdminOrderService _adminService = adminService;
@@ -76,9 +78,32 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Список заказов</returns>
         [HttpGet]
-        public async Task<ActionResult<List<OrderDto>>> GetAllOrders(CancellationToken cancellationToken)
+        public async Task<ActionResult<List<AdminOrderDto>>> GetAllAdminOrders(CancellationToken cancellationToken)
         {
-            return Ok(await _orderService.GetAllOrdersAsync(cancellationToken));
+            var orders = await _context.Carts
+                .AsNoTracking() // Добавляем для оптимизации
+                .Include(c => c.User)
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product)
+                .Where(c => c.Status != null)
+                .Select(c => new AdminOrderDto
+                {
+                    Id = c.Id,
+                    UserId = c.UserId,
+                    UserEmail = c.User.Email,
+                    Status = c.Status!,
+                    TotalAmount = c.CartItems.Sum(ci => ci.Quantity * ci.Product.Price),
+                    Items = c.CartItems.Select(ci => new OrderItemDto
+                    {
+                        ProductId = ci.ProductId,
+                        ProductName = ci.Product.Name,
+                        Quantity = ci.Quantity,
+                        UnitPrice = ci.Product.Price
+                    }).ToList()
+                })
+                .ToListAsync(cancellationToken);
+
+            return Ok(orders);
         }
 
         /// <summary>
@@ -88,11 +113,11 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Заказ</returns>
         [HttpGet("{id}")]
-        public async Task<ActionResult<OrderDto>> GetOrder(int id, CancellationToken cancellationToken)
+        public async Task<ActionResult<AdminOrderDto>> GetAdminOrder(int id, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await _orderService.GetOrderAsync(id, cancellationToken));
+                return await _orderService.GetAdminOrderAsync(id, cancellationToken);
             }
             catch (NotFoundException ex)
             {

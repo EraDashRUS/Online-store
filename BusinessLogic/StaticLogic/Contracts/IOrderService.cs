@@ -56,5 +56,8 @@ namespace OnlineStore.BusinessLogic.StaticLogic.Contracts
         /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>DTO заказа с комментарием</returns>
         Task<OrderWithCommentDto> GetOrderWithCommentAsync(int cartId, CancellationToken cancellationToken);
+
+
+        Task<AdminOrderDto> GetAdminOrderAsync(int cartId, CancellationToken cancellationToken);
     }
 }

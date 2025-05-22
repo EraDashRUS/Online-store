@@ -1,4 +1,6 @@
-﻿namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
+﻿using System.Text.Json.Serialization;
+
+namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
 {
     /// <summary>
     /// DTO для ответа с информацией об элементе корзины
@@ -13,6 +15,7 @@
         /// <summary>
         /// Идентификатор корзины
         /// </summary>
+        [JsonIgnore]
         public int CartId { get; set; }
 
         /// <summary>
@@ -20,29 +23,14 @@
         /// </summary>
         public int ProductId { get; set; }
 
-        /// <summary>
-        /// Наименование товара
-        /// </summary>
-        public string ProductName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Цена товара
-        /// </summary>
-        public decimal ProductPrice { get; set; }
-
+        [JsonIgnore]
+        public CartDto Cart { get; set; }
         /// <summary>
         /// Количество товара
         /// </summary>
         public int Quantity { get; set; }
 
-        /// <summary>
-        /// Общая стоимость позиции (цена * количество)
-        /// </summary>
-        public decimal TotalPrice => ProductPrice * Quantity;
+        public ProductBriefDto Product { get; set; }
 
-        /// <summary>
-        /// Признак доступности товара
-        /// </summary>
-        public bool IsAvailable { get; set; } = true;
     }
 }

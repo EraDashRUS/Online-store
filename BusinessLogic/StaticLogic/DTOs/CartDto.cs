@@ -5,6 +5,5 @@
         public int Id { get; set; }
         public string Status { get; set; }
         public List<CartItemDto> Items { get; set; } = new();
-        public decimal TotalAmount => Items.Sum(i => i.ProductPrice * i.Quantity);
     }
 }

@@ -59,6 +59,8 @@ namespace OnlineStore.Storage.Data
                 .WithOne(c => c.User)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            
         }
     }
 }

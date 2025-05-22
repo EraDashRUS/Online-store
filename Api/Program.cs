@@ -10,6 +10,8 @@ using OnlineStore.BusinessLogic.StaticLogic.Settings;
 using System.Security.Claims;
 using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
+using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
+using System.Text.Json;
 
 /// <summary>
 /// Точка входа в приложение
@@ -27,7 +29,9 @@ builder.Services
     .AddScoped<IProductService, ProductService>()
     .AddScoped<IRepository<Product>, Repository<Product>>()
     .AddScoped<IOrderService, OrderService>()
-    .AddScoped<AdminEmailFilter>();
+    .AddScoped<AdminEmailFilter>()
+    .AddScoped<IAdminChecker, AdminChecker>()
+    .AddScoped<IAdminOrderService, AdminOrderService>();
 
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
 
@@ -37,7 +41,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>(
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
 builder.Services.AddHttpClient();

@@ -27,15 +27,35 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Список корзин</returns>
         /// <response code="200">Успешно возвращен список корзин</response>
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Cart>>> GetAllCarts(CancellationToken cancellationToken)
+        public async Task<ActionResult<List<CartResponseDto>>> GetAllCarts(CancellationToken cancellationToken)
         {
-            return await _context.Carts
-                .Include(c => c.User)
+            var carts = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Product)
-                .AsNoTracking()
+                .Select(c => new CartResponseDto
+                {
+                    Id = c.Id,
+                    Status = c.Status ?? "Pending",
+                    UserId = c.UserId,
+                    TotalPrice = c.CartItems.Sum(ci => ci.Quantity * ci.Product.Price),
+                    Items = c.CartItems.Select(ci => new CartItemResponseDto
+                    {
+                        Id = ci.Id,
+                        Quantity = ci.Quantity,
+                        ProductId = ci.ProductId,
+                        Product = new ProductBriefDto
+                        {
+                            Id = ci.Product.Id,
+                            Name = ci.Product.Name,
+                            Description = ci.Product.Description,
+                            Price = ci.Product.Price,
+                            StockQuantity = ci.Product.StockQuantity
+                        }
+                    }).ToList()
+                })
                 .ToListAsync(cancellationToken);
+
+            return Ok(carts);
         }
 
         /// <summary>
@@ -49,15 +69,38 @@ namespace OnlineStore.Api.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Cart>> GetCart(int id, CancellationToken cancellationToken)
+        public async Task<ActionResult<CartResponseDto>> GetCart(int id, CancellationToken cancellationToken)
         {
             var cart = await _context.Carts
-                .Include(c => c.User)
                 .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product) // Добавляем загрузку продукта
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
             if (cart == null) return NotFound();
-            return cart;
+
+            var result = new CartResponseDto
+            {
+                Id = cart.Id,
+                Status = cart.Status ?? "Pending", // Обработка NULL
+                UserId = cart.UserId,
+                Items = cart.CartItems.Select(ci => new CartItemResponseDto
+                {
+                    Id = ci.Id,
+                    Quantity = ci.Quantity,
+                    ProductId = ci.ProductId,
+                    Product = ci.Product != null ? new ProductBriefDto
+                    {
+                        Id = ci.Product.Id,
+                        Name = ci.Product.Name,
+                        Description = ci.Product.Description,
+                        Price = ci.Product.Price,
+                        StockQuantity = ci.Product.StockQuantity
+                    } : null
+                }).ToList(),
+                TotalPrice = cart.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0))
+            };
+
+            return Ok(result);
         }
 
         /// <summary>

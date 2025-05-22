@@ -203,6 +203,38 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             };
         }
 
+        public async Task<AdminOrderDto> GetAdminOrderAsync(int cartId, CancellationToken cancellationToken)
+        {
+            var cart = await _context.Carts
+                .Include(c => c.User)
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product)
+                .FirstOrDefaultAsync(c => c.Id == cartId, cancellationToken);
+
+            if (cart == null) throw new NotFoundException("Cart not found");
+
+            // Гарантируем, что статус не будет null
+            var status = string.IsNullOrEmpty(cart.Status) ? "Undefined" : cart.Status;
+
+            return new AdminOrderDto
+            {
+                Id = cart.Id,
+                UserId = cart.UserId,
+                Status = status,
+                UserEmail = cart.User?.Email ?? "unknown",
+                Items = cart.CartItems.Select(ci => new OrderItemDto
+                {
+                    ProductId = ci.ProductId,
+                    ProductName = ci.Product?.Name ?? "Unknown",
+                    Quantity = ci.Quantity,
+                    UnitPrice = ci.Product?.Price ?? 0
+                }).ToList(),
+                TotalAmount = cart.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0))
+            };
+        }
+
+
+
         /// <summary>
         /// Получает временный комментарий администратора
         /// </summary>

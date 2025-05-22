@@ -1,28 +1,21 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 
 public class AdminEmailFilter : IAsyncAuthorizationFilter
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IAdminChecker _adminChecker;
 
-    public AdminEmailFilter(IHttpClientFactory httpClientFactory)
+    public AdminEmailFilter(IAdminChecker adminChecker)
     {
-        _httpClientFactory = httpClientFactory;
+        _adminChecker = adminChecker;
     }
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var email = context.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-        if (string.IsNullOrEmpty(email))
-        {
-            context.Result = new ForbidResult();
-            return;
-        }
-
-        var httpClient = _httpClientFactory.CreateClient();
-        var response = await httpClient.GetAsync($"http://localhost:5000/api/users/is-admin/{email}");
-        if (!response.IsSuccessStatusCode || !await response.Content.ReadFromJsonAsync<bool>())
+        if (string.IsNullOrEmpty(email) || !await _adminChecker.IsAdminAsync(email))
         {
             context.Result = new ForbidResult();
         }

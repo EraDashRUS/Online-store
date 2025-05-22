@@ -22,6 +22,8 @@ namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
         /// </summary>
         public List<CartItemResponseDto> Items { get; set; } = new();
 
+        public List<CartItemDto> CartItems { get; set; }
+
         /// <summary>
         /// Общая стоимость корзины
         /// </summary>
