@@ -148,8 +148,12 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                                 Id = ci.Id,
                                 Quantity = ci.Quantity,
                                 ProductId = ci.ProductId,
-                                ProductName = ci.Product?.Name ?? "Товар не найден",
-                                ProductPrice = ci.Product?.Price ?? 0
+                                Product = ci.Product != null ? new ProductBriefDto
+                                {
+                                    Name = ci.Product.Name,
+                                    Price = ci.Product.Price,
+                                    Description = ci.Product.Description
+                                } : null
                             }).ToList() ?? new List<CartItemDto>()
                     }).ToList() ?? new List<CartDto>()
             };

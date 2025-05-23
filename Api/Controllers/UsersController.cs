@@ -100,7 +100,7 @@ namespace OnlineStore.Controllers
             var user = await _context.Users
                 .Include(u => u.Carts)
                     .ThenInclude(c => c.CartItems)
-                        .ThenInclude(ci => ci.Product)
+                        .ThenInclude(ci => ci.Product) // Убедитесь, что продукты загружаются
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null) return NotFound();
@@ -120,6 +120,7 @@ namespace OnlineStore.Controllers
             var users = await _context.Users
                 .Include(u => u.Carts)
                     .ThenInclude(c => c.CartItems)
+                        .ThenInclude(ci => ci.Product) // Добавляем загрузку продуктов
                 .ToListAsync();
 
             return users.Select(ConvertToBriefDto).ToList();
@@ -367,14 +368,18 @@ namespace OnlineStore.Controllers
                                 Id = ci.Id,
                                 Quantity = ci.Quantity,
                                 ProductId = ci.ProductId,
-                                ProductName = ci.Product?.Name ?? "Товар не найден",
-                                ProductPrice = ci.Product?.Price ?? 0
+                                Product = ci.Product != null ? new ProductBriefDto
+                                {
+                                    Name = ci.Product.Name,
+                                    Price = ci.Product.Price,
+                                    Description = ci.Product.Description
+                                } : null
                             }).ToList() ?? new List<CartItemDto>()
                     }).ToList() ?? new List<CartDto>()
             };
         }
 
-        private static UserBriefDto ConvertToBriefDto(User user)
+        private UserBriefDto ConvertToBriefDto(User user)
         {
             return new UserBriefDto
             {
@@ -383,15 +388,21 @@ namespace OnlineStore.Controllers
                 LastName = user.LastName,
                 Email = user.Email,
                 ActiveCarts = user.Carts
-                    .Where(c => c.Status == "Active")
-                    .Select(c => new CartBriefDto { Id = c.Id })
+                    .Where(c => c.Status == "Active") // Фильтруем только активные
+                    .Select(c => new CartBriefDto
+                    {
+                        Id = c.Id,
+                        ItemsCount = c.CartItems.Sum(ci => ci.Quantity), // Сумма количеств
+                        Status = c.Status,
+                        TotalPrice = c.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0))
+                    })
                     .ToList()
             };
         }
 
-        private static UserDetailDto ConvertToDetailDto(User user)
+        private UserDetailDto ConvertToDetailDto(User user)
         {
-            return new UserDetailDto
+            var dto = new UserDetailDto
             {
                 Id = user.Id,
                 FirstName = user.FirstName,
@@ -399,22 +410,33 @@ namespace OnlineStore.Controllers
                 Email = user.Email,
                 Phone = user.Phone,
                 Address = user.Address,
-                ActiveCarts = user.Carts?
+                ActiveCarts = user.Carts
                     .Where(c => c.Status == "Active")
                     .Select(c => new CartDto
                     {
                         Id = c.Id,
                         Status = c.Status,
-                        Items = c.CartItems?
-                            .Select(ci => new CartItemDto
+                        UserId = c.UserId,
+                        Items = c.CartItems.Select(ci => new CartItemDto
+                        {
+                            Id = ci.Id,
+                            Quantity = ci.Quantity,
+                            ProductId = ci.ProductId,
+                            Product = ci.Product != null ? new ProductBriefDto
                             {
-                                Id = ci.Id,
-                                Quantity = ci.Quantity,
-                                ProductId = ci.ProductId,
-                                ProductName = ci.Product?.Name ?? "Товар удален"
-                            }).ToList() ?? new List<CartItemDto>()
-                    }).ToList() ?? new List<CartDto>()
+                                Id = ci.Product.Id,
+                                Name = ci.Product.Name,
+                                Price = ci.Product.Price,
+                                Description = ci.Product.Description,
+                                StockQuantity = ci.Product.StockQuantity
+                            } : null
+                        }).ToList(),
+                        TotalPrice = c.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0))
+                    })
+                    .ToList()
             };
+
+            return dto;
         }
 
         [HttpGet("{userId}/carts")]
@@ -429,14 +451,23 @@ namespace OnlineStore.Controllers
             return carts.Select(c => new CartDto
             {
                 Id = c.Id,
-                Status = c.Status,
+                Status = c.Status ?? "Pending", // Обработка NULL статуса
+                UserId = c.UserId, // Добавляем UserId
                 Items = c.CartItems.Select(ci => new CartItemDto
                 {
                     Id = ci.Id,
                     Quantity = ci.Quantity,
                     ProductId = ci.ProductId,
-                    ProductName = ci.Product?.Name ?? "Товар удален"
-                }).ToList()
+                    Product = ci.Product != null ? new ProductBriefDto
+                    {
+                        Id = ci.Product.Id, // Добавляем Id продукта
+                        Name = ci.Product.Name,
+                        Description = ci.Product.Description,
+                        Price = ci.Product.Price, // Добавляем цену
+                        StockQuantity = ci.Product.StockQuantity // Добавляем количество
+                    } : null
+                }).ToList(),
+                TotalPrice = c.CartItems.Sum(ci => ci.Quantity * (ci.Product?.Price ?? 0)) // Добавляем расчет суммы
             }).ToList();
         }
 

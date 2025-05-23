@@ -4,6 +4,9 @@
     {
         public int Id { get; set; }
         public int ItemsCount { get; set; } // Количество товаров в корзине
-        public string Status { get; set; } = "Active";
+        public string Status { get; set; }
+        public decimal TotalPrice { get; set; }
+
+        public int UserId { get; set; }
     }
 }

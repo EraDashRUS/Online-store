@@ -15,7 +15,7 @@ namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
         /// <summary>
         /// Идентификатор корзины
         /// </summary>
-        [JsonIgnore]
+        
         public int CartId { get; set; }
 
         /// <summary>
@@ -23,8 +23,7 @@ namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
         /// </summary>
         public int ProductId { get; set; }
 
-        [JsonIgnore]
-        public CartDto Cart { get; set; }
+        public CartBriefDto Cart { get; set; }
         /// <summary>
         /// Количество товара
         /// </summary>

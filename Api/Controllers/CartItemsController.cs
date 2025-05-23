@@ -24,14 +24,49 @@ namespace OnlineStore.Api.Controllers
         /// </summary>
         /// <returns>Список элементов корзины</returns>
         /// <response code="200">Возвращает список элементов корзины</response>
-        [HttpGet]
+        [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<CartItem>>> GetCartItems(CancellationToken cancellationToken)
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<CartItemResponseDto>> GetCartItem(int id, CancellationToken cancellationToken)
         {
-            return await _context.CartItems
+            var cartItem = await _context.CartItems
+                .AsNoTracking()
                 .Include(ci => ci.Product)
                 .Include(ci => ci.Cart)
-                .ToListAsync(cancellationToken);
+                    .ThenInclude(c => c.CartItems)
+                        .ThenInclude(ci => ci.Product)
+                .Where(ci => ci.Id == id)
+                .Select(ci => new CartItemResponseDto
+                {
+                    Id = ci.Id,
+                    Quantity = ci.Quantity,
+                    CartId = ci.CartId,
+                    ProductId = ci.ProductId,
+                    Product = new ProductBriefDto
+                    {
+                        Id = ci.Product.Id,
+                        Name = ci.Product.Name,
+                        Description = ci.Product.Description,
+                        Price = ci.Product.Price,
+                        StockQuantity = ci.Product.StockQuantity
+                    },
+                    Cart = new CartBriefDto
+                    {
+                        Id = ci.Cart.Id,
+                        Status = ci.Cart.Status ?? "Pending",
+                        UserId = ci.Cart.UserId,
+                        ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity),
+                        TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price)
+                    }
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (cartItem == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(cartItem);
         }
 
         /// <summary>
@@ -41,19 +76,41 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Элемент корзины</returns>
         /// <response code="200">Элемент корзины найден</response>
         /// <response code="404">Элемент корзины не найден</response>
-        [HttpGet("{id}")]
+        [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<CartItem>> GetCartItem(int id, CancellationToken cancellationToken)
+        public async Task<ActionResult<IEnumerable<CartItemResponseDto>>> GetCartItems(CancellationToken cancellationToken)
         {
-            var cartItem = await _context.CartItems.FindAsync(new object[] { id }, cancellationToken);
+            var cartItems = await _context.CartItems
+                .AsNoTracking()
+                .Include(ci => ci.Product)
+                .Include(ci => ci.Cart)
+                    .ThenInclude(c => c.CartItems) // Добавляем для подсчета
+                .Select(ci => new CartItemResponseDto
+                {
+                    Id = ci.Id,
+                    Quantity = ci.Quantity,
+                    CartId = ci.CartId,
+                    ProductId = ci.ProductId,
+                    Product = new ProductBriefDto
+                    {
+                        Id = ci.Product.Id,
+                        Name = ci.Product.Name,
+                        Description = ci.Product.Description,
+                        Price = ci.Product.Price,
+                        StockQuantity = ci.Product.StockQuantity
+                    },
+                    Cart = new CartBriefDto
+                    {
+                        Id = ci.Cart.Id,
+                        Status = ci.Cart.Status ?? "Pending",
+                        UserId = ci.Cart.UserId,
+                        ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity), // Считаем общее количество
+                        TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price) // Считаем сумму
+                    }
+                })
+                .ToListAsync(cancellationToken);
 
-            if (cartItem == null)
-            {
-                return NotFound();
-            }
-
-            return cartItem;
+            return Ok(cartItems);
         }
 
         /// <summary>
