@@ -4,6 +4,7 @@ using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Models;
 using OnlineStore.Storage.Data;
+using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
 
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
@@ -14,13 +15,16 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
     {
         private readonly ApplicationDbContext _context;
 
+        private readonly IAdminCommentService _adminCommentService;
+
         /// <summary>
         /// Инициализирует новый экземпляр сервиса заказов
         /// </summary>
         /// <param name="context">Контекст базы данных</param>
-        public OrderService(ApplicationDbContext context)
+        public OrderService(ApplicationDbContext context, IAdminCommentService adminCommentService)
         {
             _context = context;
+            _adminCommentService = adminCommentService;
         }
 
         /// <summary>
@@ -144,14 +148,21 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         /// <returns>Обновленная информация о заказе</returns>
         /// <exception cref="NotFoundException">Заказ не найден</exception>
         public async Task<OrderDto> UpdateOrderStatusAsync(
-            int cartId,
-            OrderStatusUpdateDto statusDto,
-            CancellationToken cancellationToken)
+    int cartId,
+    OrderStatusUpdateDto statusDto,
+    CancellationToken cancellationToken)
         {
             var cart = await _context.Carts.FindAsync(new object[] { cartId }, cancellationToken);
             if (cart == null) throw new NotFoundException("Order not found");
 
             cart.Status = statusDto.NewStatus;
+
+            // Сохраняем комментарий, если он есть
+            if (!string.IsNullOrEmpty(statusDto.AdminComment))
+            {
+                _adminCommentService.AddComment(cartId, statusDto.AdminComment);
+            }
+
             await _context.SaveChangesAsync(cancellationToken);
 
             return await GetOrderAsync(cartId, cancellationToken);
@@ -191,6 +202,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         public async Task<OrderWithCommentDto> GetOrderWithCommentAsync(int cartId, CancellationToken cancellationToken)
         {
             var order = await GetOrderAsync(cartId, cancellationToken);
+            var comment = _adminCommentService.GetComment(cartId);
 
             return new OrderWithCommentDto
             {
@@ -199,7 +211,7 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 Status = order.Status,
                 TotalAmount = order.TotalAmount,
                 Items = order.Items,
-                AdminComment = GetTemporaryAdminComment(cartId)
+                AdminComment = comment
             };
         }
 
@@ -235,14 +247,6 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 
 
 
-        /// <summary>
-        /// Получает временный комментарий администратора
-        /// </summary>
-        /// <param name="cartId">Идентификатор корзины</param>
-        /// <returns>Комментарий администратора</returns>
-        private static string? GetTemporaryAdminComment(int cartId)
-        {
-            return cartId % 2 == 0 ? "Проверенный заказ" : null;
-        }
+
     }
 }

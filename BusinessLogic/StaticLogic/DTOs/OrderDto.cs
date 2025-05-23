@@ -20,6 +20,6 @@
     public class OrderStatusUpdateDto
     {
         public string NewStatus { get; set; }
-        public string? AdminComment { get; set; }
+        public string AdminComment { get; set; }
     }
 }

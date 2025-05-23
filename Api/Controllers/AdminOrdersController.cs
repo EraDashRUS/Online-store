@@ -4,6 +4,8 @@ using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.Storage.Data;
+using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
+using System;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -15,13 +17,31 @@ namespace OnlineStore.Api.Controllers
     /// </remarks>
     /// <param name="orderService">Сервис заказов</param>
     /// <param name="adminService">Сервис администрирования заказов</param>
+    /// 
     [Route("api/admin/orders")]
-    [ApiController] 
-   // [TypeFilter(typeof(AdminEmailFilter))]
-    public class AdminOrdersController(IOrderService orderService, IAdminOrderService adminService, ApplicationDbContext _context) : ControllerBase
+
+    [ApiController]
+
+    // [TypeFilter(typeof(AdminEmailFilter))]
+
+    public class AdminOrdersController : ControllerBase
     {
-        private readonly IOrderService _orderService = orderService;
-        private readonly IAdminOrderService _adminService = adminService;
+        private readonly IOrderService _orderService;
+        private readonly IAdminOrderService _adminService;
+        private readonly IAdminCommentService _adminCommentService;
+        private readonly ApplicationDbContext _context;
+
+        public AdminOrdersController(
+        IOrderService orderService,
+        IAdminOrderService adminService,
+        ApplicationDbContext context,
+        IAdminCommentService adminCommentService)
+        {
+            _orderService = orderService;
+            _adminService = adminService;
+            _context = context;
+            _adminCommentService = adminCommentService;
+        }
 
         /// <summary>
         /// Подтверждает заказ
@@ -134,21 +154,22 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Обновленный заказ</returns>
         [HttpPut("{id}/status")]
         public async Task<ActionResult<OrderDto>> UpdateOrderStatus(
-            int id,
-            [FromBody] OrderStatusUpdateDto statusDto,
-            CancellationToken cancellationToken)
+    int id,
+    [FromBody] OrderStatusUpdateDto statusDto,
+    CancellationToken cancellationToken)
         {
             try
             {
+                if (!string.IsNullOrEmpty(statusDto.AdminComment))
+                {
+                    _adminCommentService.AddComment(id, statusDto.AdminComment);
+                }
+
                 return Ok(await _orderService.UpdateOrderStatusAsync(id, statusDto, cancellationToken));
             }
             catch (NotFoundException ex)
             {
                 return NotFound(ex.Message);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
             }
         }
 

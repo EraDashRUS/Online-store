@@ -31,7 +31,10 @@ builder.Services
     .AddScoped<IOrderService, OrderService>()
     .AddScoped<AdminEmailFilter>()
     .AddScoped<IAdminChecker, AdminChecker>()
-    .AddScoped<IAdminOrderService, AdminOrderService>();
+    .AddScoped<IAdminOrderService, AdminOrderService>()
+    .AddScoped<IAdminCommentService, AdminCommentService>(); ;
+
+builder.Services.AddSingleton<IAdminCommentService, AdminCommentService>();
 
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
 
