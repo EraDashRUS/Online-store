@@ -1,34 +1,38 @@
 ﻿namespace OnlineStore.Storage.Models
 {
     /// <summary>
-    /// Представляет предмет в корзине.
+    /// Представляет товар в корзине пользователя.
     /// </summary>
     public class CartItem
     {
         /// <summary>
-        /// Идентификатор доставки.
+        /// Уникальный идентификатор позиции в корзине.
         /// </summary>
         public int Id { get; set; }
 
         /// <summary>
-        /// Количество продукта в корзине.
+        /// Количество выбранного товара.
         /// </summary>
         public int Quantity { get; set; }
 
         /// <summary>
-        /// Идентификатор корзины.
+        /// Идентификатор корзины, к которой относится эта позиция.
         /// </summary>
         public int CartId { get; set; }
 
         /// <summary>
-        /// Идентификатор продукта.
+        /// Идентификатор товара.
         /// </summary>
         public int ProductId { get; set; }
 
         /// <summary>
-        /// Навигационные свойства.
+        /// Корзина, к которой относится эта позиция.
         /// </summary>
         public Cart Cart { get; set; }
+
+        /// <summary>
+        /// Товар, добавленный в корзину.
+        /// </summary>
         public Product Product { get; set; }
     }
 }

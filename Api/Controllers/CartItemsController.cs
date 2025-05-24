@@ -1,19 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OnlineStore.BusinessLogic.StaticLogic.DTOs;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Product;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Cart;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.CartItem;
 using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
 
 namespace OnlineStore.Api.Controllers
 {
     /// <summary>
-    /// Контроллер для работы с элементами корзины покупок
+    /// Контроллер для управления элементами корзины покупателя.
     /// </summary>
-    /// <remarks>
-    /// Инициализирует новый экземпляр <see cref="CartItemsController"/>
-    /// </remarks>
-    /// <param name="context">Контекст базы данных</param>
     [Route("api/[controller]")]
     [ApiController]
     public class CartItemsController(ApplicationDbContext context) : ControllerBase
@@ -21,16 +19,27 @@ namespace OnlineStore.Api.Controllers
         private readonly ApplicationDbContext _context = context;
 
         /// <summary>
-        /// Получает все элементы корзины с информацией о товарах и корзинах
+        /// Получить элемент корзины по идентификатору.
         /// </summary>
-        /// <returns>Список элементов корзины</returns>
-        /// <response code="200">Возвращает список элементов корзины</response>
+        /// <param name="id">Идентификатор элемента корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Данные элемента корзины</returns>
+        /// <response code="200">Элемент найден</response>
+        /// <response code="404">Элемент не найден</response>
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<CartItemResponseDto>> GetCartItem(int id, CancellationToken cancellationToken)
         {
-            var cartItem = await _context.CartItems
+            var cartItem = await GetCartItemWithDetails(id, cancellationToken);
+            if (cartItem == null)
+                return NotFound();
+            return Ok(cartItem);
+        }
+
+        private async Task<CartItemResponseDto?> GetCartItemWithDetails(int id, CancellationToken cancellationToken)
+        {
+            return await _context.CartItems
                 .AsNoTracking()
                 .Include(ci => ci.Product)
                 .Include(ci => ci.Cart)
@@ -59,32 +68,30 @@ namespace OnlineStore.Api.Controllers
                     }
                 })
                 .FirstOrDefaultAsync(cancellationToken);
-
-            if (cartItem == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(cartItem);
         }
 
         /// <summary>
-        /// Получает конкретный элемент корзины по идентификатору
+        /// Получить список всех элементов корзины (только для администратора).
         /// </summary>
-        /// <param name="id">Идентификатор элемента корзины</param>
-        /// <returns>Элемент корзины</returns>
-        /// <response code="200">Элемент корзины найден</response>
-        /// <response code="404">Элемент корзины не найден</response>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Список элементов корзины</returns>
+        /// <response code="200">Список элементов корзины</response>
         [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<CartItemResponseDto>>> GetCartItems(CancellationToken cancellationToken)
         {
-            var cartItems = await _context.CartItems
+            var cartItems = await GetAllCartItemsWithDetails(cancellationToken);
+            return Ok(cartItems);
+        }
+
+        private async Task<List<CartItemResponseDto>> GetAllCartItemsWithDetails(CancellationToken cancellationToken)
+        {
+            return await _context.CartItems
                 .AsNoTracking()
                 .Include(ci => ci.Product)
                 .Include(ci => ci.Cart)
-                    .ThenInclude(c => c.CartItems) // Добавляем для подсчета
+                    .ThenInclude(c => c.CartItems)
                 .Select(ci => new CartItemResponseDto
                 {
                     Id = ci.Id,
@@ -102,22 +109,21 @@ namespace OnlineStore.Api.Controllers
                     {
                         Id = ci.Cart.Id,
                         Status = ci.Cart.Status ?? "Pending",
-                        ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity), // Считаем общее количество
-                        TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price) // Считаем сумму
+                        ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity),
+                        TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price)
                     }
                 })
                 .ToListAsync(cancellationToken);
-
-            return Ok(cartItems);
         }
 
         /// <summary>
-        /// Обновляет существующий элемент корзины
+        /// Обновить существующий элемент корзины.
         /// </summary>
-        /// <param name="id">Идентификатор элемента</param>
+        /// <param name="id">Идентификатор элемента корзины</param>
         /// <param name="cartItem">Данные для обновления</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Результат операции</returns>
-        /// <response code="204">Элемент успешно обновлен</response>
+        /// <response code="204">Элемент обновлен</response>
         /// <response code="400">Неверный идентификатор</response>
         /// <response code="404">Элемент не найден</response>
         [HttpPut("{id}")]
@@ -127,9 +133,7 @@ namespace OnlineStore.Api.Controllers
         public async Task<IActionResult> PutCartItem(int id, CartItem cartItem, CancellationToken cancellationToken)
         {
             if (id != cartItem.Id)
-            {
                 return BadRequest();
-            }
 
             _context.Entry(cartItem).State = EntityState.Modified;
 
@@ -140,24 +144,20 @@ namespace OnlineStore.Api.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!CartItemExists(id))
-                {
                     return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                throw;
             }
 
             return NoContent();
         }
 
         /// <summary>
-        /// Добавляет новый товар в корзину
+        /// Добавить новый товар в корзину.
         /// </summary>
-        /// <param name="dto">DTO с данными для добавления товара</param>
+        /// <param name="dto">Данные для добавления товара</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Созданный элемент корзины</returns>
-        /// <response code="201">Товар успешно добавлен</response>
+        /// <response code="201">Товар добавлен</response>
         /// <response code="400">Недостаточно товара на складе</response>
         /// <response code="404">Корзина или товар не найдены</response>
         [HttpPost]
@@ -177,11 +177,6 @@ namespace OnlineStore.Api.Controllers
             return CreatedAtAction(nameof(GetCartItem), new { id = cartItem.Id }, MapToResponse(cartItem));
         }
 
-        /// <summary>
-        /// Проверяет существование корзины и товара
-        /// </summary>
-        /// <param name="dto">DTO с данными для проверки</param>
-        /// <returns>Кортеж с корзиной и товаром</returns>
         private async Task<(Cart? cart, Product? product)> ValidateRequestAsync(CartItemCreateDto dto, CancellationToken cancellationToken)
         {
             var cart = await _context.Carts.FindAsync(new object[] { dto.CartId }, cancellationToken);
@@ -189,23 +184,11 @@ namespace OnlineStore.Api.Controllers
             return (cart, product);
         }
 
-        /// <summary>
-        /// Проверяет наличие достаточного количества товара на складе
-        /// </summary>
-        /// <param name="product">Товар</param>
-        /// <param name="quantity">Запрашиваемое количество</param>
-        /// <returns>True если товара достаточно, иначе False</returns>
         private static bool CheckStock(Product product, int quantity)
         {
             return product.StockQuantity >= quantity;
         }
 
-        /// <summary>
-        /// Создает новый элемент корзины
-        /// </summary>
-        /// <param name="dto">DTO с данными элемента</param>
-        /// <param name="product">Товар</param>
-        /// <returns>Созданный элемент корзины</returns>
         private async Task<CartItem> CreateCartItemAsync(CartItemCreateDto dto, Product product, CancellationToken cancellationToken)
         {
             var cartItem = new CartItem
@@ -221,22 +204,18 @@ namespace OnlineStore.Api.Controllers
             return cartItem;
         }
 
-        /// <summary>
-        /// Преобразует элемент корзины в формат ответа
-        /// </summary>
-        /// <param name="item">Элемент корзины</param>
-        /// <returns>Объект ответа</returns>
         private static object MapToResponse(CartItem item)
         {
             return new { item.Id, item.CartId, item.ProductId, item.Quantity };
         }
 
         /// <summary>
-        /// Удаляет элемент из корзины
+        /// Удалить элемент из корзины.
         /// </summary>
-        /// <param name="id">Идентификатор элемента</param>
+        /// <param name="id">Идентификатор элемента корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <returns>Результат операции</returns>
-        /// <response code="204">Элемент успешно удален</response>
+        /// <response code="204">Элемент удален</response>
         /// <response code="404">Элемент не найден</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -245,9 +224,7 @@ namespace OnlineStore.Api.Controllers
         {
             var cartItem = await _context.CartItems.FindAsync(new object[] { id }, cancellationToken);
             if (cartItem == null)
-            {
                 return NotFound();
-            }
 
             _context.CartItems.Remove(cartItem);
             await _context.SaveChangesAsync(cancellationToken);
@@ -255,11 +232,6 @@ namespace OnlineStore.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Проверяет существование элемента корзины
-        /// </summary>
-        /// <param name="id">Идентификатор элемента</param>
-        /// <returns>True если элемент существует, иначе False</returns>
         private bool CartItemExists(int id)
         {
             return _context.CartItems.Any(e => e.Id == id);

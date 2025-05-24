@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
-using OnlineStore.BusinessLogic.StaticLogic.DTOs;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Cart;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.CartItem;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Product;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.User;
 using OnlineStore.BusinessLogic.StaticLogic.Settings;
 using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
@@ -13,14 +16,8 @@ using System.Text;
 namespace OnlineStore.BusinessLogic.DynamicLogic.Services
 {
     /// <summary>
-    /// Сервис для работы с пользователями
+    /// Сервис для управления пользователями: регистрация, получение, аутентификация.
     /// </summary>
-    /// <remarks>
-    /// Инициализирует новый экземпляр класса UserService
-    /// </remarks>
-    /// <param name="context">Контекст базы данных</param>
-    /// <param name="userRepository">Репозиторий пользователей</param>
-    /// <param name="adminSettings">Настройки администраторов</param>
     public class UserService(
         ApplicationDbContext context,
         IRepository<User> userRepository,
@@ -31,20 +28,18 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         private readonly List<string> _adminEmails = adminSettings.Value.AdminEmails;
 
         /// <summary>
-        /// Создает нового пользователя
+        /// Регистрирует нового пользователя. Генерирует корзину по умолчанию.
         /// </summary>
-        /// <param name="userDto">DTO с данными пользователя</param>
+        /// <param name="userDto">Данные пользователя</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO созданного пользователя</returns>
-        /// <exception cref="ArgumentException">Возникает, если пользователь с таким email уже существует</exception>
+        /// <returns>Информация о созданном пользователе</returns>
+        /// <exception cref="ArgumentException">Пользователь с таким email уже существует</exception>
         public async Task<UserResponseDto> CreateUserAsync(UserCreateDto userDto, CancellationToken cancellationToken = default)
         {
             using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-
             try
             {
-                if (await _context.Users.AnyAsync(u => u.Email == userDto.Email, cancellationToken))
-                    throw new ArgumentException("Пользователь с таким email уже существует");
+                await EnsureUserEmailUnique(userDto.Email, cancellationToken);
 
                 var user = new User
                 {
@@ -69,30 +64,39 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
             }
         }
 
+        private async Task EnsureUserEmailUnique(string email, CancellationToken cancellationToken)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == email, cancellationToken))
+                throw new ArgumentException("Пользователь с таким email уже существует");
+        }
+
         /// <summary>
-        /// Получает пользователя по идентификатору
+        /// Получает пользователя по идентификатору.
         /// </summary>
-        /// <param name="id">Идентификатор пользователя</param>
+        /// <param name="id">ID пользователя</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO пользователя</returns>
-        /// <exception cref="NotFoundException">Возникает, если пользователь не найден</exception>
+        /// <returns>Информация о пользователе</returns>
+        /// <exception cref="NotFoundException">Пользователь не найден</exception>
         public async Task<UserResponseDto> GetUserByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
                 .Include(u => u.Cart)
                 .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-            return user == null ? throw new NotFoundException("Пользователь не найден") : ConvertToDto(user);
+            if (user == null)
+                throw new NotFoundException("Пользователь не найден");
+
+            return ConvertToDto(user);
         }
 
         /// <summary>
-        /// Аутентифицирует пользователя
+        /// Аутентифицирует пользователя по email и паролю.
         /// </summary>
-        /// <param name="email">Email пользователя</param>
-        /// <param name="password">Пароль пользователя</param>
+        /// <param name="email">Email</param>
+        /// <param name="password">Пароль</param>
         /// <param name="cancellationToken">Токен отмены</param>
-        /// <returns>DTO аутентифицированного пользователя</returns>
-        /// <exception cref="AuthenticationException">Возникает при неверных учетных данных</exception>
+        /// <returns>Информация о пользователе</returns>
+        /// <exception cref="AuthenticationException">Неверные учетные данные</exception>
         public async Task<UserResponseDto> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users
@@ -108,21 +112,16 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
         }
 
         /// <summary>
-        /// Проверяет соответствие пароля хешу
+        /// Проверяет соответствие пароля хешу.
         /// </summary>
-        /// <param name="password">Проверяемый пароль</param>
-        /// <param name="storedHash">Сохраненный хеш</param>
-        /// <returns>true если пароль верный, иначе false</returns>
         private static bool VerifyPassword(string password, string storedHash)
         {
             return HashPassword(password) == storedHash;
         }
 
         /// <summary>
-        /// Преобразует сущность пользователя в DTO
+        /// Преобразует пользователя в DTO.
         /// </summary>
-        /// <param name="user">Сущность пользователя</param>
-        /// <returns>DTO пользователя</returns>
         private static UserResponseDto ConvertToDto(User user)
         {
             if (user == null) return null;
@@ -135,39 +134,64 @@ namespace OnlineStore.BusinessLogic.DynamicLogic.Services
                 Email = user.Email ?? string.Empty,
                 Phone = user.Phone ?? string.Empty,
                 Address = user.Address ?? string.Empty,
-                ActiveCarts = user.Carts?
-                    .Where(c => c != null && c.Status == "Active")
-                    .Select(c => new CartDto
-                    {
-                        Id = c.Id,
-                        Status = c.Status ?? string.Empty,
-                        Items = c.CartItems?
-                            .Where(ci => ci != null)
-                            .Select(ci => new CartItemDto
-                            {
-                                Id = ci.Id,
-                                Quantity = ci.Quantity,
-                                ProductId = ci.ProductId,
-                                Product = ci.Product != null ? new ProductBriefDto
-                                {
-                                    Name = ci.Product.Name,
-                                    Price = ci.Product.Price,
-                                    Description = ci.Product.Description
-                                } : null
-                            }).ToList() ?? new List<CartItemDto>()
-                    }).ToList() ?? new List<CartDto>()
+                ActiveCarts = GetActiveCarts(user)
+            };
+        }
+
+        private static List<CartDto> GetActiveCarts(User user)
+        {
+            if (user.Carts == null)
+                return new List<CartDto>();
+
+            return user.Carts
+                .Where(c => c != null && c.Status == "Active")
+                .Select(ConvertCartToDto)
+                .ToList();
+        }
+
+        private static CartDto ConvertCartToDto(Cart c)
+        {
+            return new CartDto
+            {
+                Id = c.Id,
+                Status = c.Status ?? string.Empty,
+                Items = GetCartItems(c)
+            };
+        }
+
+        private static List<CartItemDto> GetCartItems(Cart c)
+        {
+            if (c.CartItems == null)
+                return new List<CartItemDto>();
+
+            return c.CartItems
+                .Where(ci => ci != null)
+                .Select(ConvertCartItemToDto)
+                .ToList();
+        }
+
+        private static CartItemDto ConvertCartItemToDto(CartItem ci)
+        {
+            return new CartItemDto
+            {
+                Id = ci.Id,
+                Quantity = ci.Quantity,
+                ProductId = ci.ProductId,
+                Product = ci.Product != null ? new ProductBriefDto
+                {
+                    Name = ci.Product.Name,
+                    Price = ci.Product.Price,
+                    Description = ci.Product.Description
+                } : null
             };
         }
 
         /// <summary>
-        /// Хеширует пароль
+        /// Хеширует пароль PBKDF2 с фиксированной солью.
         /// </summary>
-        /// <param name="password">Исходный пароль</param>
-        /// <returns>Хеш пароля</returns>
         private static string HashPassword(string password)
         {
             byte[] salt = Encoding.ASCII.GetBytes("FIXED_SALT");
-
             return Convert.ToBase64String(KeyDerivation.Pbkdf2(
                 password: password,
                 salt: salt,

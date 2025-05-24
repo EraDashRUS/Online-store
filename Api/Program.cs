@@ -12,12 +12,13 @@ using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
 using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication.JwtBearer; // Для JWT-аутентификации
-using Microsoft.IdentityModel.Tokens; // Для работы с токенами
-using System.Text; // Для кодирования ключа
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 /// <summary>
-/// Точка входа в приложение
+/// Главная точка входа в приложение OnlineStore API.
+/// Здесь происходит настройка сервисов, middleware и запуск приложения.
 /// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,8 +60,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy =>
-    policy.RequireAuthenticatedUser()
-          .RequireRole("Admin"));
+        policy.RequireAuthenticatedUser()
+              .RequireRole("Admin"));
 });
 
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
@@ -83,7 +84,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Admin API", Version = "v1" });
 
-    // Добавляем поддержку JWT в Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme.",
@@ -108,7 +108,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
 
 var app = builder.Build();
 

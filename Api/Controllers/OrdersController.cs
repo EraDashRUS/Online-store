@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
-using OnlineStore.BusinessLogic.StaticLogic.DTOs;
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Order;
 using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
 
@@ -19,8 +19,10 @@ namespace OnlineStore.Api.Controllers
         private readonly IOrderService _orderService = orderService;
 
         /// <summary>
-        /// Получает список всех заказов
+        /// Получить список всех заказов (только для администратора)
         /// </summary>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Список заказов</returns>
         [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -30,20 +32,28 @@ namespace OnlineStore.Api.Controllers
         }
 
         /// <summary>
-        /// Получает заказ по идентификатору
+        /// Получить заказ по идентификатору
         /// </summary>
+        /// <param name="id">ID заказа</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Данные заказа или 404</returns>
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Order>> GetOrder(int id, CancellationToken cancellationToken)
         {
             var order = await _context.Orders.FindAsync(new object[] { id }, cancellationToken);
-            return order == null ? NotFound() : Ok(order);
+            if (order == null)
+                return NotFound();
+            return Ok(order);
         }
 
         /// <summary>
-        /// Оформляет заказ из корзины
+        /// Оформить заказ из корзины (только для администратора)
         /// </summary>
+        /// <param name="cartId">ID корзины</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Данные заказа или 404</returns>
         [Authorize(Policy = "AdminOnly")]
         [HttpPost("cart/{cartId}/checkout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -62,8 +72,12 @@ namespace OnlineStore.Api.Controllers
         }
 
         /// <summary>
-        /// Обновляет данные заказа
+        /// Обновить данные заказа
         /// </summary>
+        /// <param name="id">ID заказа</param>
+        /// <param name="order">Обновлённые данные заказа</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>204, 400 или 404</returns>
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -90,13 +104,25 @@ namespace OnlineStore.Api.Controllers
         }
 
         /// <summary>
-        /// Создает новый заказ
+        /// Создать новый заказ
         /// </summary>
+        /// <param name="orderDto">Данные для создания заказа</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Созданный заказ</returns>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<Order>> PostOrder(OrderCreateDto orderDto, CancellationToken cancellationToken)
         {
-            var order = new Order
+            var order = CreateOrderFromDto(orderDto);
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        }
+
+        private static Order CreateOrderFromDto(OrderCreateDto orderDto)
+        {
+            return new Order
             {
                 OrderDate = DateTime.UtcNow,
                 Status = orderDto.Status,
@@ -116,16 +142,14 @@ namespace OnlineStore.Api.Controllers
                     PaymentDate = DateTime.UtcNow
                 }
             };
-
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return CreatedAtAction("GetOrder", new { id = order.Id }, order);
         }
 
         /// <summary>
-        /// Удаляет заказ
+        /// Удалить заказ по идентификатору
         /// </summary>
+        /// <param name="id">ID заказа</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>204 или 404</returns>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -140,6 +164,9 @@ namespace OnlineStore.Api.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Проверить, существует ли заказ по ID
+        /// </summary>
         private bool OrderExists(int id)
         {
             return _context.Orders.Any(e => e.Id == id);

@@ -15,52 +15,52 @@ namespace OnlineStore.Storage.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Order -> Delivery (1:1)
+            // Связь Order -> Delivery (один к одному)
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Delivery)
                 .WithOne(d => d.Order)
                 .HasForeignKey<Delivery>(d => d.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Order -> Payment (1:1)
+            // Связь Order -> Payment (один к одному)
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Payment)
                 .WithOne(p => p.Order)
                 .HasForeignKey<Payment>(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Cart -> Order (1:1)
+            // Связь Cart -> Order (один к одному)
             modelBuilder.Entity<Cart>()
                 .HasOne(c => c.Order)
                 .WithOne(o => o.Cart)
                 .HasForeignKey<Order>(o => o.CartId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Остальные конфигурации
+            // Связь Cart -> User (многие к одному)
             modelBuilder.Entity<Cart>()
                 .HasOne(c => c.User)
                 .WithMany(u => u.Carts)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Связь CartItem -> Cart (многие к одному)
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.Cart)
                 .WithMany(c => c.CartItems)
                 .HasForeignKey(ci => ci.CartId);
 
+            // Связь CartItem -> Product (многие к одному)
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.Product)
                 .WithMany(p => p.CartItems)
                 .HasForeignKey(ci => ci.ProductId);
 
-            // User -> Cart (один ко многим)
+            // Связь User -> Cart (один ко многим)
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Carts)
                 .WithOne(c => c.User)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            
         }
     }
 }

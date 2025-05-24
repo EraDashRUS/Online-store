@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using OnlineStore.BusinessLogic.StaticLogic.DTOs; 
+using OnlineStore.BusinessLogic.StaticLogic.DTOs.Product;
 
 namespace OnlineStore.BusinessLogic.StaticLogic.Validators
 {

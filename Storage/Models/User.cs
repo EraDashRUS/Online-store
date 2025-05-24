@@ -37,26 +37,30 @@ namespace OnlineStore.Storage.Models
         public string PasswordHash { get; set; }
 
         /// <summary>
-        /// Номер телефона пользователя.
+        /// Номер телефона пользователя (необязательное поле).
         /// </summary>
         [StringLength(20)]
         public string? Phone { get; set; }
 
         /// <summary>
-        /// Адрес пользователя.
+        /// Адрес пользователя (необязательное поле).
         /// </summary>
         [StringLength(200)]
         public string? Address { get; set; }
 
         /// <summary>
-        /// Список корзин пользователя.
+        /// Список корзин пользователя (например, история корзин).
         /// </summary>
-        public List<Cart> Carts { get; set; } = [];
+        public List<Cart> Carts { get; set; } = new List<Cart>();
 
         /// <summary>
-        /// Навигационные свойства
+        /// Текущая активная корзина пользователя (может быть null, если корзина не создана).
         /// </summary>
-        public Cart Cart { get; set; }
-        public List<Order> Orders { get; set; } = [];
+        public Cart? Cart { get; set; }
+
+        /// <summary>
+        /// Список заказов, оформленных пользователем.
+        /// </summary>
+        public List<Order> Orders { get; set; } = new List<Order>();
     }
 }

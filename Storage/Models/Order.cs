@@ -34,12 +34,12 @@ namespace OnlineStore.Storage.Models
         public string DeliveryAddress { get; set; }
 
         /// <summary>
-        /// Идентификатор связанной доставки.
+        /// Идентификатор связанной доставки (может быть null, если доставка ещё не создана).
         /// </summary>
         public int? DeliveryId { get; set; }
 
         /// <summary>
-        /// Идентификатор связанного платежа.
+        /// Идентификатор связанного платежа (может быть null, если платёж ещё не создан).
         /// </summary>
         public int? PaymentId { get; set; }
 
@@ -54,22 +54,22 @@ namespace OnlineStore.Storage.Models
         public int? CartId { get; set; }
 
         /// <summary>
-        /// Навигационное свойство для доставки.
+        /// Навигационное свойство для доставки, связанной с заказом.
         /// </summary>
         [ForeignKey("DeliveryId")]
         public Delivery? Delivery { get; set; }
 
         /// <summary>
-        /// Навигационное свойство для платежа.
+        /// Навигационное свойство для платежа, связанного с заказом.
         /// </summary>
         [ForeignKey("PaymentId")]
         public Payment? Payment { get; set; }
 
         /// <summary>
-        /// Навигационное свойство для корзины (может быть null).
+        /// Навигационное свойство для корзины, связанной с заказом (может быть null, если корзина удалена).
+        /// Не сериализуется в JSON.
         /// </summary>
-        /// 
-        [JsonIgnore] // Важное изменение
+        [JsonIgnore]
         [ForeignKey("CartId")]
         public Cart? Cart { get; set; }
     }
