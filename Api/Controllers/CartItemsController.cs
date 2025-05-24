@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Storage.Data;
@@ -40,7 +41,6 @@ namespace OnlineStore.Api.Controllers
                 {
                     Id = ci.Id,
                     Quantity = ci.Quantity,
-                    CartId = ci.CartId,
                     ProductId = ci.ProductId,
                     Product = new ProductBriefDto
                     {
@@ -54,7 +54,6 @@ namespace OnlineStore.Api.Controllers
                     {
                         Id = ci.Cart.Id,
                         Status = ci.Cart.Status ?? "Pending",
-                        UserId = ci.Cart.UserId,
                         ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity),
                         TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price)
                     }
@@ -76,6 +75,7 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Элемент корзины</returns>
         /// <response code="200">Элемент корзины найден</response>
         /// <response code="404">Элемент корзины не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<CartItemResponseDto>>> GetCartItems(CancellationToken cancellationToken)
@@ -89,7 +89,6 @@ namespace OnlineStore.Api.Controllers
                 {
                     Id = ci.Id,
                     Quantity = ci.Quantity,
-                    CartId = ci.CartId,
                     ProductId = ci.ProductId,
                     Product = new ProductBriefDto
                     {
@@ -103,7 +102,6 @@ namespace OnlineStore.Api.Controllers
                     {
                         Id = ci.Cart.Id,
                         Status = ci.Cart.Status ?? "Pending",
-                        UserId = ci.Cart.UserId,
                         ItemsCount = ci.Cart.CartItems.Sum(item => item.Quantity), // Считаем общее количество
                         TotalPrice = ci.Cart.CartItems.Sum(item => item.Quantity * item.Product.Price) // Считаем сумму
                     }

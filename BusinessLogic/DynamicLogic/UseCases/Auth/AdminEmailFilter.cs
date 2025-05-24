@@ -14,8 +14,7 @@ public class AdminEmailFilter : IAsyncAuthorizationFilter
 
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        var email = context.HttpContext.User.FindFirstValue(ClaimTypes.Email);
-        if (string.IsNullOrEmpty(email) || !await _adminChecker.IsAdminAsync(email))
+        if (!await _adminChecker.IsAdminAsync())
         {
             context.Result = new ForbidResult();
         }

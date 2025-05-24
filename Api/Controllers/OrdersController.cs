@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
@@ -20,6 +21,7 @@ namespace OnlineStore.Api.Controllers
         /// <summary>
         /// Получает список всех заказов
         /// </summary>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders(CancellationToken cancellationToken)
@@ -42,6 +44,7 @@ namespace OnlineStore.Api.Controllers
         /// <summary>
         /// Оформляет заказ из корзины
         /// </summary>
+        [Authorize(Policy = "AdminOnly")]
         [HttpPost("cart/{cartId}/checkout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -91,12 +94,32 @@ namespace OnlineStore.Api.Controllers
         /// </summary>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<Order>> PostOrder(Order order, CancellationToken cancellationToken)
+        public async Task<ActionResult<Order>> PostOrder(OrderCreateDto orderDto, CancellationToken cancellationToken)
         {
-           
+            var order = new Order
+            {
+                OrderDate = DateTime.UtcNow,
+                Status = orderDto.Status,
+                TotalAmount = orderDto.TotalAmount,
+                DeliveryAddress = orderDto.DeliveryAddress,
+                UserId = orderDto.UserId,
+                CartId = orderDto.CartId,
+                Delivery = new Delivery
+                {
+                    Status = orderDto.DeliveryStatus,
+                    DeliveryDate = orderDto.DeliveryDate
+                },
+                Payment = new Payment
+                {
+                    Status = orderDto.PaymentStatus,
+                    Amount = orderDto.TotalAmount,
+                    PaymentDate = DateTime.UtcNow
+                }
+            };
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync(cancellationToken);
+
             return CreatedAtAction("GetOrder", new { id = order.Id }, order);
         }
 

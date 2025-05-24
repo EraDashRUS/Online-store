@@ -2,6 +2,7 @@
 using OnlineStore.BusinessLogic.StaticLogic.Contracts;
 using OnlineStore.BusinessLogic.StaticLogic.Contracts.Exceptions;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -38,6 +39,7 @@ namespace OnlineStore.Api.Controllers
         /// </summary>
         /// <returns>Список товаров</returns>
         /// <response code="200">Успешно возвращен список товаров</response>
+        [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ProductResponseDto>>> GetProducts()
@@ -53,6 +55,7 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Данные товара</returns>
         /// <response code="200">Товар найден</response>
         /// <response code="404">Товар не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -78,6 +81,7 @@ namespace OnlineStore.Api.Controllers
         /// <response code="204">Товар успешно обновлен</response>
         /// <response code="400">Неверный идентификатор</response>
         /// <response code="404">Товар не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -106,6 +110,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="productDto">Данные нового товара</param>
         /// <returns>Созданный товар</returns>
         /// <response code="201">Товар успешно создан</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<ProductResponseDto>> PostProduct(ProductCreateDto productDto)
@@ -121,6 +126,7 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Результат операции</returns>
         /// <response code="204">Товар успешно удален</response>
         /// <response code="404">Товар не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

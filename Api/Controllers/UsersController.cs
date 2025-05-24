@@ -94,6 +94,7 @@ namespace OnlineStore.Controllers
         /// <returns>Данные пользователя</returns>
         /// <response code="200">Пользователь найден</response>
         /// <response code="404">Пользователь не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("{id}")]
         public async Task<ActionResult<UserDetailDto>> GetUserById(int id)
         {
@@ -114,6 +115,7 @@ namespace OnlineStore.Controllers
         /// <param name="cancellationToken">Токен отмены операции</param>
         /// <returns>Список пользователей</returns>
         /// <response code="200">Успешно возвращен список пользователей</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         public async Task<ActionResult<List<UserBriefDto>>> GetAllUsers()
         {
@@ -136,6 +138,7 @@ namespace OnlineStore.Controllers
         /// <response code="204">Данные успешно обновлены</response>
         /// <response code="400">Неверный идентификатор</response>
         /// <response code="404">Пользователь не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -180,6 +183,7 @@ namespace OnlineStore.Controllers
         /// <returns>Результат операции</returns>
         /// <response code="204">Пользователь успешно удален</response>
         /// <response code="404">Пользователь не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -209,6 +213,7 @@ namespace OnlineStore.Controllers
         /// <response code="200">Пользователь найден</response>
         /// <response code="400">Некорректный email</response>
         /// <response code="404">Пользователь не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("email")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -299,7 +304,7 @@ namespace OnlineStore.Controllers
             }
         }
 
-
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("is-admin/{email}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -439,6 +444,7 @@ namespace OnlineStore.Controllers
             return dto;
         }
 
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("{userId}/carts")]
         public async Task<ActionResult<List<CartDto>>> GetUserCarts(int userId)
         {

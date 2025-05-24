@@ -16,7 +16,7 @@ namespace OnlineStore.BusinessLogic.StaticLogic.DTOs
         /// Идентификатор корзины
         /// </summary>
         
-        public int CartId { get; set; }
+    //    public int CartId { get; set; }
 
         /// <summary>
         /// Идентификатор товара

@@ -7,6 +7,5 @@
         public string Status { get; set; }
         public decimal TotalPrice { get; set; }
 
-        public int UserId { get; set; }
     }
 }

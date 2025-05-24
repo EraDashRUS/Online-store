@@ -12,6 +12,9 @@ using OnlineStore.Storage.Data;
 using OnlineStore.Storage.Models;
 using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.JwtBearer; // Для JWT-аутентификации
+using Microsoft.IdentityModel.Tokens; // Для работы с токенами
+using System.Text; // Для кодирования ключа
 
 /// <summary>
 /// Точка входа в приложение
@@ -32,9 +35,33 @@ builder.Services
     .AddScoped<AdminEmailFilter>()
     .AddScoped<IAdminChecker, AdminChecker>()
     .AddScoped<IAdminOrderService, AdminOrderService>()
-    .AddScoped<IAdminCommentService, AdminCommentService>(); ;
+    .AddScoped<IAdminCommentService, AdminCommentService>()
+    .AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IAdminCommentService, AdminCommentService>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+    policy.RequireAuthenticatedUser()
+          .RequireRole("Admin"));
+});
 
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("AdminSettings"));
 
@@ -54,16 +81,34 @@ builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Admin API", Version = "v1" });
+
+    // Добавляем поддержку JWT в Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Title = "OnlineStore API",
-        Version = "v1",
-        Contact = new OpenApiContact { Name = "Developer" }
+        Description = "JWT Authorization header using the Bearer scheme.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
-builder.Services.AddAuthentication("DummyScheme")
-    .AddCookie("DummyScheme", options => { });
 
 var app = builder.Build();
 
@@ -87,6 +132,7 @@ if (app.Environment.IsDevelopment())
         await next();
     });
 }
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();

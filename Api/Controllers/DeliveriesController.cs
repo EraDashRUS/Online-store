@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены операции</param>
         /// <returns>Список доставок</returns>
         /// <response code="200">Успешно возвращен список доставок</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<Delivery>>> GetDeliveries(CancellationToken cancellationToken)

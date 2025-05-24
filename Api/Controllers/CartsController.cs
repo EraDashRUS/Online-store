@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.BusinessLogic.StaticLogic.DTOs;
 using OnlineStore.Storage.Data;
@@ -26,6 +27,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены операции</param>
         /// <returns>Список корзин</returns>
         /// <response code="200">Успешно возвращен список корзин</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         public async Task<ActionResult<List<CartResponseDto>>> GetAllCarts(CancellationToken cancellationToken)
         {

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using OnlineStore.Storage.Data;
 using OnlineStore.BusinessLogic.DynamicLogic.UseCases;
 using System;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OnlineStore.Api.Controllers
 {
@@ -19,10 +20,8 @@ namespace OnlineStore.Api.Controllers
     /// <param name="adminService">Сервис администрирования заказов</param>
     /// 
     [Route("api/admin/orders")]
-
     [ApiController]
-
-    // [TypeFilter(typeof(AdminEmailFilter))]
+    [Authorize(Policy = "AdminOnly")]
 
     public class AdminOrdersController : ControllerBase
     {

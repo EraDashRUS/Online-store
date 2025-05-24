@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.Models;
 using OnlineStore.Storage.Data;
@@ -25,6 +26,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены операции</param>
         /// <returns>Список платежей</returns>
         /// <response code="200">Успешно возвращен список платежей</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<Payment>>> GetPayments(CancellationToken cancellationToken)
@@ -65,6 +67,7 @@ namespace OnlineStore.Api.Controllers
         /// <response code="204">Платеж успешно обновлен</response>
         /// <response code="400">Неверный идентификатор</response>
         /// <response code="404">Платеж не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -104,6 +107,7 @@ namespace OnlineStore.Api.Controllers
         /// <param name="cancellationToken">Токен отмены операции</param>
         /// <returns>Созданный платеж</returns>
         /// <response code="201">Платеж успешно создан</response>
+        
         [HttpPost]
         public async Task<ActionResult<Payment>> CreatePayment([FromBody] CreatePaymentDto dto)
         {
@@ -155,6 +159,7 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Результат операции</returns>
         /// <response code="204">Платеж успешно удален</response>
         /// <response code="404">Платеж не найден</response>
+        [Authorize(Policy = "AdminOnly")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
