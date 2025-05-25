@@ -163,7 +163,7 @@ namespace OnlineStore.Controllers
             return NoContent();
         }
 
-        private void UpdateUserFields(User user, UserUpdateDto userDto)
+        private static void UpdateUserFields(User user, UserUpdateDto userDto)
         {
             user.FirstName = userDto.FirstName;
             user.LastName = userDto.LastName;

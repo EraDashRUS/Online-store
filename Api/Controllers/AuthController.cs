@@ -61,7 +61,7 @@ namespace OnlineStore.Api.Controllers
             return null;
         }
 
-        private bool CheckCredentials(LoginDto loginDto)
+        private static bool CheckCredentials(LoginDto loginDto)
         {
             return loginDto.Email == "admin@example.com" && loginDto.Password == "1234567890";
         }

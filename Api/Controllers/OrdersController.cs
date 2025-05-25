@@ -111,10 +111,52 @@ namespace OnlineStore.Api.Controllers
         /// <returns>Созданный заказ</returns>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Order>> PostOrder(OrderCreateDto orderDto, CancellationToken cancellationToken)
         {
-            var order = CreateOrderFromDto(orderDto);
+          
+            var cart = await _context.Carts
+                .Include(c => c.CartItems)
+                .ThenInclude(i => i.Product) 
+                .FirstOrDefaultAsync(c => c.Id == orderDto.CartId, cancellationToken);
+
+            if (cart == null)
+                return BadRequest("Корзина не найдена");
+
+            if (!cart.CartItems.Any())
+                return BadRequest("Корзина пуста");
+
+           
+            decimal totalAmount = cart.CartItems.Sum(item =>
+                item.Quantity * (item.Product?.Price ?? 0));
+
+            
+            var order = new Order
+            {
+                OrderDate = DateTime.UtcNow,
+                Status = orderDto.Status,
+                TotalAmount = totalAmount,
+                DeliveryAddress = orderDto.DeliveryAddress,
+                UserId = orderDto.UserId,
+                CartId = orderDto.CartId,
+                Delivery = new Delivery
+                {
+                    Status = orderDto.DeliveryStatus,
+                    DeliveryDate = orderDto.DeliveryDate
+                },
+                Payment = new Payment
+                {
+                    Status = orderDto.PaymentStatus,
+                    Amount = totalAmount,
+                    PaymentDate = DateTime.UtcNow
+                }
+            };
+
             _context.Orders.Add(order);
+
+         
+            cart.Status = "ConvertedToOrder";
+
             await _context.SaveChangesAsync(cancellationToken);
 
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
